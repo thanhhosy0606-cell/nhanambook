@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Chi tiết đơn hàng #' + ${order.maDH})}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="main-content py-4">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav class="small mb-4 text-muted">
+            <a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a> / 
+            <a th:href="@{/shop/my-orders}" class="text-decoration-none text-muted">Đơn hàng của tôi</a> / 
+            <span class="text-dark fw-medium" th:text="'Đơn hàng #' + ${order.maDH}">Chi tiết đơn</span>
+        </nav>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div>
+                <h3 class="fw-bold text-dark mb-1">
+                    Đơn hàng #<span th:text="${order.maDH}">12345</span>
+                </h3>
+                <span class="text-muted small">
+                    Đặt ngày: <span th:text="${#temporals.format(order.ngayDat, 'dd/MM/yyyy HH:mm')}">01/01/2026</span>
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a th:if="${order.trangThai != 'DA_HUY'}"
+                   th:href="@{/shop/order/{id}/invoice(id=${order.maDH})}" class="btn btn-outline-success btn-sm rounded-pill px-3 py-1.5 fw-semibold shadow-sm">
+                    <i class="fa-solid fa-file-invoice me-1"></i> Xem hóa đơn
+                </a>
+                <!-- Order Status Badge (DONHANG.TrangThai) -->
+                <span th:if="${order.trangThai == 'CHO_XAC_NHAN'}" class="badge bg-warning text-dark px-3 py-2 rounded-pill fs-6">
+                    <i class="fa-solid fa-hourglass-half me-1"></i> Chờ xác nhận
+                </span>
+                <span th:if="${order.trangThai == 'DA_XAC_NHAN'}" class="badge bg-info text-dark px-3 py-2 rounded-pill fs-6">
+                    <i class="fa-solid fa-clipboard-check me-1"></i> Đã xác nhận
+                </span>
+                <span th:if="${order.trangThai == 'DANG_GIAO'}" class="badge bg-primary px-3 py-2 rounded-pill fs-6">
+                    <i class="fa-solid fa-truck-fast me-1"></i> Đang giao hàng
+                </span>
+                <span th:if="${order.trangThai == 'DA_GIAO'}" class="badge bg-success px-3 py-2 rounded-pill fs-6">
+                    <i class="fa-solid fa-check me-1"></i> Đã giao thành công
+                </span>
+                <span th:if="${order.trangThai == 'DA_HUY'}" class="badge bg-danger px-3 py-2 rounded-pill fs-6">
+                    <i class="fa-solid fa-ban me-1"></i> Đã hủy
+                </span>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div th:if="${isCancelled}" class="alert alert-warning border-warning border-opacity-50 rounded-4 p-3 mb-4 shadow-sm">
+            <div class="d-flex align-items-center gap-3">
+                <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning-emphasis">
+                    <i class="fa-solid fa-triangle-exclamation fa-xl"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1 text-dark">Bạn đã hủy giao dịch trên cổng PayOS</h6>
+                    <p class="small text-muted mb-0">Đơn hàng #<span th:text="${order.maDH}"></span> vẫn được giữ ở trạng thái <strong>Chờ xác nhận</strong>. Bạn có thể chọn phương thức thanh toán khác ở bên dưới (ví dụ <strong>Tiền mặt COD</strong> khi nhận hàng) hoặc hủy đơn để quay lại giỏ hàng.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông báo tự động hủy nếu đơn online đang chờ thanh toán -->
+        <div th:if="${order.trangThai == 'CHO_XAC_NHAN' and !isCod and (payment == null or payment.trangThai != 'THANH_CONG')}"
+             class="alert alert-light border border-warning rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3">
+            <div class="p-2 bg-warning bg-opacity-25 rounded-circle text-warning-emphasis flex-shrink-0">
+                <i class="fa-solid fa-clock fa-lg"></i>
+            </div>
+            <div class="small">
+                <div class="fw-bold text-dark">Đơn hàng đang chờ thanh toán trực tuyến</div>
+                <div class="text-muted">
+                    Vui lòng hoàn tất thanh toán trước
+                    <strong class="text-danger" th:if="${order.ngayDat != null}"
+                            th:text="${#temporals.format(order.ngayDat.plusMinutes(15), 'HH:mm dd/MM/yyyy')}">--:--</strong>.
+                    Sau <strong>15 phút</strong> nếu chưa thanh toán, hệ thống sẽ <strong>tự động hủy đơn</strong> và hoàn lại sách vào kho cũng như lượt dùng mã giảm giá.
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông báo hạn thanh toán trực tuyến theo cột ThoiGianHetHanTT -->
+        <div th:if="${order.trangThai == 'CHO_XAC_NHAN' and order.thoiGianHetHanTT != null}"
+             class="alert alert-warning border-warning border-opacity-25 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3">
+            <div class="p-2 bg-warning bg-opacity-10 rounded-circle text-warning flex-shrink-0">
+                <i class="fa-solid fa-clock fa-lg"></i>
+            </div>
+            <div class="small">
+                <div class="fw-bold text-dark">Đơn hàng đang chờ thanh toán trực tuyến</div>
+                <div class="text-muted">
+                    Vui lòng hoàn tất thanh toán trước
+                    <strong class="text-danger" th:text="${#temporals.format(order.thoiGianHetHanTT, 'HH:mm dd/MM/yyyy')}">12:30 22/11/2026</strong>.
+                    Sau thời hạn này hệ thống sẽ tự động hủy đơn và hoàn kho.
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông báo nếu đơn đã bị hệ thống tự động hủy -->
+        <div th:if="${order.trangThai == 'DA_HUY' and order.ghiChu != null and #strings.contains(order.ghiChu, 'Tự động hủy')}"
+             class="alert alert-danger border-danger border-opacity-25 rounded-4 p-3 mb-4 shadow-sm d-flex align-items-center gap-3">
+            <div class="p-2 bg-danger bg-opacity-10 rounded-circle text-danger flex-shrink-0">
+                <i class="fa-solid fa-robot fa-lg"></i>
+            </div>
+            <div class="small">
+                <div class="fw-bold text-danger">Đơn hàng đã được hệ thống tự động hủy</div>
+                <div class="text-muted">Đơn hàng quá thời hạn thanh toán trực tuyến 15 phút. Tồn kho sách và số lượng mã giảm giá (nếu có) đã được hoàn trả tự động.</div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left: Order Items & Delivery Info -->
+            <div class="col-lg-8">
+                <!-- Delivery Info -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-map-location-dot text-primary"></i> Địa chỉ nhận hàng
+                    </h5>
+                    <div class="row g-2 small">
+                        <div class="col-sm-6">
+                            <span class="text-muted">Người nhận:</span>
+                            <span class="fw-bold text-dark d-block" th:text="${order.hoTenNguoiNhan}">Họ tên</span>
+                        </div>
+                        <div class="col-sm-6">
+                            <span class="text-muted">Số điện thoại:</span>
+                            <span class="fw-bold text-dark d-block" th:text="${order.sdtNguoiNhan}">0987654321</span>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <span class="text-muted">Địa chỉ giao:</span>
+                            <span class="text-dark d-block" th:text="${order.diaChiGiaoHang}">123 Đường ABC</span>
+                        </div>
+                        <div class="col-12 mt-1" th:if="${order.ghiChuHienThi != null and !order.ghiChuHienThi.isEmpty()}">
+                            <span class="text-muted">Ghi chú:</span>
+                            <span class="text-secondary d-block fst-italic" th:text="${order.ghiChuHienThi}">Ghi chú</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Items list -->
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white mb-4">
+                    <div class="p-3 bg-light border-bottom">
+                        <h6 class="fw-bold mb-0 text-dark">Danh sách sách trong đơn</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <tbody>
+                                <th:block th:each="it : ${order.chiTietList}" th:with="reviewed=${userRatingsMap != null ? userRatingsMap.get(it.sach.maSach) : null}">
+                                    <tr>
+                                        <td class="ps-4 py-3">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <img th:src="${it.sach.hinhAnh != null ? it.sach.hinhAnh : 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200'}" 
+                                                     alt="Cover" class="rounded-3 shadow-sm" style="width: 50px; height: 70px; object-fit: cover;">
+                                                <div>
+                                                    <a th:href="@{/shop/book/{id}(id=${it.sach.maSach})}" 
+                                                       class="fw-bold text-dark text-decoration-none" th:text="${it.sach.tenSach}">Tên sách</a>
+                                                    <small class="text-muted d-block" th:text="${it.sach.tacGia}">Tác giả</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-muted" th:text="${#numbers.formatDecimal(it.donGia, 0, 'POINT', 0, 'POINT') + ' đ'}">150.000 đ</td>
+                                        <td class="fw-semibold text-center" th:text="'x' + ${it.soLuong}">x1</td>
+                                        <td class="pe-4 text-end fw-bold text-danger" 
+                                            th:text="${#numbers.formatDecimal(it.thanhTien, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                            150.000 đ
+                                        </td>
+                                    </tr>
+
+                                    <!-- Phần đánh giá ở ngay dưới quyển sách này (Chỉ hiển thị khi đơn hàng ĐÃ GIAO THÀNH CÔNG) -->
+                                    <tr class="border-bottom" style="background-color: #fbfcfd;" th:if="${order.trangThai == 'DA_GIAO'}">
+                                        <td colspan="4" class="ps-4 pe-4 py-3">
+                                            <div class="d-flex flex-column gap-2">
+                                                <!-- Đã đánh giá: Hiển thị tóm tắt và nút chỉnh sửa -->
+                                                <div th:if="${reviewed != null}" class="d-flex justify-content-between align-items-center bg-white p-3 rounded-3 border">
+                                                    <div>
+                                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                                            <span class="badge bg-success bg-opacity-10 text-success fw-bold">
+                                                                <i class="fa-solid fa-circle-check me-1"></i> Bạn đã đánh giá
+                                                            </span>
+                                                            <span class="text-warning small">
+                                                                <span th:each="i : ${#numbers.sequence(1, reviewed.soSao)}">⭐</span>
+                                                                <strong class="ms-1 text-dark" th:text="${reviewed.soSao + '/5 sao'}">5/5 sao</strong>
+                                                            </span>
+                                                            <small class="text-muted ms-2" th:if="${reviewed.ngayDanhGia != null}" 
+                                                                   th:text="${#temporals.format(reviewed.ngayDanhGia, 'dd/MM/yyyy HH:mm')}"></small>
+                                                        </div>
+                                                        <p class="small text-secondary mb-0 fst-italic" th:text="${reviewed.noiDung}">Nội dung đánh giá</p>
+                                                    </div>
+                                                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 small">
+                                                        <i class="fa-solid fa-lock me-1"></i> Đã hoàn thành đánh giá
+                                                    </span>
+                                                </div>
+
+
+                                                <!-- Chưa đánh giá: Nút mở form đánh giá nhanh -->
+                                                <div th:if="${reviewed == null}">
+                                                    <div class="d-flex justify-content-between align-items-center bg-white p-3 rounded-3 border">
+                                                        <small class="text-muted d-flex align-items-center gap-1">
+                                                            <i class="fa-regular fa-star text-warning"></i> Bạn đã mua cuốn sách này? Hãy để lại cảm nhận và đánh giá nhé.
+                                                        </small>
+                                                        <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-semibold shadow-sm" 
+                                                                type="button" 
+                                                                th:attr="data-bs-toggle='collapse', data-bs-target='#rateForm_' + ${it.sach.maSach}">
+                                                            <i class="fa-solid fa-star text-warning me-1"></i> Đánh giá sách
+                                                        </button>
+                                                    </div>
+
+                                                    <!-- Form đánh giá mới (Collapse) -->
+                                                    <div class="collapse mt-2" th:id="'rateForm_' + ${it.sach.maSach}">
+                                                        <form th:action="@{/shop/order/{orderId}/rate-book/{bookId}(orderId=${order.maDH}, bookId=${it.sach.maSach})}" method="post" class="card card-body border-0 shadow-sm rounded-3 p-3 bg-white border">
+                                                            <h6 class="fw-bold small text-dark mb-2">
+                                                                Đánh giá cuốn sách: <span class="text-success" th:text="${it.sach.tenSach}">Tên sách</span>
+                                                            </h6>
+                                                            <div class="row g-2 align-items-center mb-2">
+                                                                <div class="col-sm-4">
+                                                                    <label class="form-label small fw-semibold text-secondary mb-1">Số sao đánh giá:</label>
+                                                                    <select name="soSao" class="form-select form-select-sm">
+                                                                        <option value="5" selected>⭐⭐⭐⭐⭐ - Rất hài lòng (5 sao)</option>
+                                                                        <option value="4">⭐⭐⭐⭐ - Hài lòng (4 sao)</option>
+                                                                        <option value="3">⭐⭐⭐ - Bình thường (3 sao)</option>
+                                                                        <option value="2">⭐⭐ - Không hài lòng (2 sao)</option>
+                                                                        <option value="1">⭐ - Rất tệ (1 sao)</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="col-sm-8">
+                                                                    <label class="form-label small fw-semibold text-secondary mb-1">Cảm nhận của bạn về cuốn sách:</label>
+                                                                    <input type="text" name="noiDung" class="form-control form-control-sm" placeholder="Chia sẻ suy nghĩ của bạn về nội dung, chất lượng in ấn..." required>
+                                                                </div>
+                                                            </div>
+                                                            <div class="d-flex justify-content-end gap-2">
+                                                                <button type="button" class="btn btn-sm btn-light border rounded-pill px-3" 
+                                                                        th:attr="data-bs-toggle='collapse', data-bs-target='#rateForm_' + ${it.sach.maSach}">Hủy</button>
+                                                                <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 fw-semibold">
+                                                                    <i class="fa-solid fa-paper-plane me-1"></i> Gửi đánh giá
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </th:block>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Payment & Summary (THANHTOAN & Cổng thanh toán) -->
+            <div class="col-lg-4">
+                <!-- Payment Box -->
+                <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                    <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-credit-card text-primary"></i> Thanh toán
+                    </h5>
+
+                    <div class="mb-3">
+                        <div class="small text-muted mb-1">Phương thức thanh toán:</div>
+                        <span class="badge bg-light text-dark border px-3 py-2 fw-semibold fs-6" 
+                              th:text="${payment != null ? payment.ptthThanhToan.tenPTTT : 'Tiền mặt'}">
+                            Tiền mặt (COD)
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="small text-muted mb-1">Trạng thái thanh toán:</div>
+                        <span th:if="${order.trangThai == 'DA_HUY'}" class="badge bg-danger px-3 py-2 fs-6">
+                            <i class="fa-solid fa-ban me-1"></i> Đã hủy
+                        </span>
+                        <span th:if="${order.trangThai != 'DA_HUY' and ((payment != null and payment.trangThai == 'THANH_CONG') or order.trangThai == 'DA_GIAO')}" class="badge bg-success px-3 py-2 fs-6">
+                            <i class="fa-solid fa-check me-1"></i> Đã thanh toán thành công
+                        </span>
+                        <span th:if="${order.trangThai != 'DA_HUY' and isCod and order.trangThai != 'DA_GIAO' and (payment == null or payment.trangThai != 'THANH_CONG')}" class="badge bg-success px-3 py-2 fs-6">
+                            <i class="fa-solid fa-circle-check me-1"></i> Thanh toán khi nhận hàng (COD)
+                        </span>
+                        <span th:if="${order.trangThai != 'DA_HUY' and payment != null and payment.trangThai == 'CHO_THANH_TOAN' and !isCod and order.trangThai == 'CHO_XAC_NHAN'}" class="badge bg-warning text-dark px-3 py-2 fs-6">
+                            <i class="fa-solid fa-clock me-1"></i> Chờ thanh toán
+                        </span>
+                        <span th:if="${order.trangThai != 'DA_HUY' and payment == null and order.trangThai != 'DA_GIAO' and !isCod}" class="badge bg-secondary px-3 py-2 fs-6">
+                            Chưa tạo giao dịch
+                        </span>
+                    </div>
+
+                    <!-- ONLINE PAYMENT ACTION CARD (Chỉ hiển thị khi đơn chờ xác nhận và chưa thanh toán) -->
+                    <div th:if="${order.trangThai == 'CHO_XAC_NHAN' and payment != null and payment.trangThai == 'CHO_THANH_TOAN' and (isVietQr or isMoMo) and !isCancelled}"
+                         class="p-3.5 rounded-4 my-3 text-center shadow-sm"
+                         th:style="${isMoMo} ? 'background-color: #fff0f6; border: 1px solid #fcc2d7 !important;' : 'background-color: #f0fdf4; border: 1px solid #bbf7d0 !important;'">
+                        <div class="mb-2">
+                            <span th:if="${isMoMo}" class="badge text-white px-3 py-1.5 rounded-pill" style="background-color: #d82d8b; font-size: 13px;">
+                                <i class="fa-solid fa-wallet me-1"></i> CỔNG VÍ MOMO
+                            </span>
+                            <span th:if="${isVietQr}" class="badge text-white px-3 py-1.5 rounded-pill" style="background-color: #059669; font-size: 13px;">
+                                <i class="fa-solid fa-qrcode me-1"></i> CỔNG VIETQR (BIDV)
+                            </span>
+                        </div>
+                        <p class="small text-muted mb-3">
+                            Đơn hàng đang chờ thanh toán. Vui lòng mở trang thanh toán riêng để quét mã QR chuyển khoản tự động.
+                        </p>
+                        <a th:href="@{/shop/order/{id}/payment(id=${order.maDH})}" 
+                           th:class="${isMoMo} ? 'btn btn-danger w-100 rounded-pill py-2.5 fw-semibold shadow-sm' : 'btn btn-success w-100 rounded-pill py-2.5 fw-semibold shadow-sm'"
+                           th:style="${isMoMo} ? 'background-color: #d82d8b; border-color: #d82d8b;' : ''">
+                            <i class="fa-solid fa-qrcode me-2"></i> Mở màn hình quét mã QR thanh toán
+                        </a>
+                    </div>
+
+                    <!-- 4. COD Box (Thanh toán khi nhận hàng - Thành công luôn) -->
+                    <div th:if="${isCod and order.trangThai != 'DA_HUY'}" 
+                         class="p-3.5 bg-success bg-opacity-10 rounded-4 my-3 text-center border border-success border-opacity-25 shadow-sm">
+                        <div class="text-success mb-2"><i class="fa-solid fa-circle-check fa-2x"></i></div>
+                        <h6 class="fw-bold text-success mb-1">Xác nhận đơn hàng thành công (COD)</h6>
+                        <p class="small text-muted mb-0">Đơn hàng của bạn đã được xác nhận thành công. Quý khách thanh toán tiền mặt trực tiếp cho nhân viên giao hàng khi nhận sách.</p>
+                    </div>
+
+                    <!-- Payment Method Switcher (Chỉ hiển thị cho các đơn hàng Online MoMo/VietQR đang chờ xác minh thanh toán) -->
+                    <div th:if="${order.trangThai == 'CHO_XAC_NHAN' and (payment == null or payment.trangThai == 'CHO_THANH_TOAN') and !isCod}" 
+                         class="p-3 bg-light rounded-4 my-3 border border-primary border-opacity-25 shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark small">
+                                <i class="fa-solid fa-arrows-rotate text-primary me-1"></i> Chọn phương thức thanh toán khác:
+                            </span>
+                        </div>
+
+                        <form th:action="@{/shop/order/{id}/change-payment-method(id=${order.maDH})}" method="post">
+                            <div class="d-flex flex-column gap-2 mb-3">
+                                <div class="payment-switch-item d-flex align-items-center gap-2" 
+                                     th:each="pt : ${paymentMethods}">
+                                    <input class="form-check-input ms-0 mt-0" type="radio" 
+                                           name="maPTTT" 
+                                           th:id="'change_pttt_' + ${pt.maPTTT}" 
+                                           th:value="${pt.maPTTT}" 
+                                           th:checked="${payment != null and payment.ptthThanhToan.maPTTT == pt.maPTTT}" 
+                                           required>
+                                    <label class="form-check-label w-100 cursor-pointer mb-0 small" th:for="'change_pttt_' + ${pt.maPTTT}">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <span class="fw-bold text-dark" th:text="${pt.tenPTTT}">Tên</span>
+                                                <small class="text-muted d-block" th:if="${pt.tenPTTT == 'Tiền mặt' or pt.tenPTTT == 'Tien mat'}">Thanh toán khi nhận hàng (COD)</small>
+                                                <small class="text-muted d-block" th:if="${pt.tenPTTT == 'VietQR'}">Quét mã QR PayOS</small>
+                                                <small class="text-muted d-block" th:if="${pt.tenPTTT == 'MoMo'}">Cổng thanh toán MoMo (QR & App)</small>
+                                            </div>
+                                            <div>
+                                                <span th:if="${pt.tenPTTT == 'Tiền mặt' or pt.tenPTTT == 'Tien mat'}" class="badge bg-secondary">COD</span>
+                                                <span th:if="${pt.tenPTTT == 'VietQR'}" class="badge bg-success">PayOS</span>
+                                                <span th:if="${pt.tenPTTT == 'MoMo'}" class="badge text-white" style="background-color: #d82d8b;">MoMo</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 fw-semibold shadow-sm mb-2">
+                                <i class="fa-solid fa-check me-1"></i> Xác nhận đổi phương thức
+                            </button>
+                        </form>
+
+                        <!-- Button: Hủy đơn & Quay lại đặt hàng -->
+                        <form th:action="@{/shop/order/{id}/cancel-and-return-to-cart(id=${order.maDH})}" method="post"
+                              onsubmit="return confirm('Bạn có muốn hủy đơn hàng này và đưa sách trở lại giỏ hàng để chọn lại?');">
+                            <button type="submit" class="btn btn-outline-danger w-100 rounded-pill py-1.5 small fw-semibold">
+                                <i class="fa-solid fa-arrow-rotate-left me-1"></i> Hủy đơn & Quay lại giỏ hàng
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Price summary -->
+                    <div class="border-top pt-3 mt-3">
+                        <div class="d-flex justify-content-between mb-1 small">
+                            <span class="text-muted">Tạm tính:</span>
+                            <span class="text-dark" th:text="${#numbers.formatDecimal(order.giaTamTinh, 0, 'POINT', 0, 'POINT') + ' đ'}">300.000 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1 small" th:if="${order.giamGia > 0}">
+                            <span class="text-success">Giảm giá voucher:</span>
+                            <span class="text-success fw-bold" th:text="'-' + ${#numbers.formatDecimal(order.giamGia, 0, 'POINT', 0, 'POINT') + ' đ'}">-30.000 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Phí vận chuyển:</span>
+                            <span class="text-dark" th:text="${#numbers.formatDecimal(order.phiVC, 0, 'POINT', 0, 'POINT') + ' đ'}">25.000 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                            <span class="fw-bold text-dark">Tổng cộng:</span>
+                            <span class="h4 fw-bold text-danger mb-0" 
+                                  th:text="${#numbers.formatDecimal(order.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                295.000 đ
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <a th:href="@{/shop/my-orders}" class="btn btn-light w-100 rounded-pill py-2 border">
+                        <i class="fa-solid fa-list-check me-1"></i> Xem danh sách đơn hàng
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+
+<script th:inline="javascript">
+// Order detail scripts
+</script>
+</body>
+</html>
+

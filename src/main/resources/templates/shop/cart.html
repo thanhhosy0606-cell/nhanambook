@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Giỏ hàng của bạn')}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="main-content py-4">
+    <div class="container">
+        <h3 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-cart-shopping text-primary"></i> Giỏ hàng của bạn
+        </h3>
+
+        <!-- Empty Cart -->
+        <div class="text-center py-5 bg-white rounded-4 shadow-sm" th:if="${items.isEmpty()}">
+            <div class="d-inline-flex p-4 bg-light rounded-circle text-muted mb-3">
+                <i class="fa-solid fa-cart-arrow-down fa-3x"></i>
+            </div>
+            <h4 class="fw-bold text-dark">Giỏ hàng của bạn đang trống</h4>
+            <p class="text-muted small mb-4">Hãy chọn những cuốn sách bạn yêu thích để thêm vào giỏ.</p>
+            <a th:href="@{/shop/books}" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold">
+                Khám phá sách ngay
+            </a>
+        </div>
+
+        <!-- Cart Items List -->
+        <div class="row g-4" th:if="${!items.isEmpty()}">
+            <div class="col-lg-8">
+                <!-- Discontinued Items Notice Banner -->
+                <div class="alert alert-warning border-0 rounded-4 shadow-sm mb-3 d-flex align-items-center gap-3"
+                     th:if="${hasDiscontinuedItems}">
+                    <div class="bg-warning bg-opacity-25 text-warning-emphasis p-2 rounded-circle flex-shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation fa-lg"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block text-dark">Thông báo ngừng bán</strong>
+                        <span class="small text-secondary">Trong giỏ hàng của bạn có cuốn sách đã <strong>ngừng bán</strong>. Vui lòng bấm biểu tượng thùng rác để xóa cuốn sách đó khỏi giỏ trước khi thanh toán.</span>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="ps-4" style="width: 44px;">
+                                        <input class="form-check-input cart-check" type="checkbox" id="cartSelectAll" checked
+                                               title="Chọn tất cả">
+                                    </th>
+                                    <th>Sản phẩm</th>
+                                    <th>Đơn giá</th>
+                                    <th style="width: 165px;">Số lượng</th>
+                                    <th>Thành tiền</th>
+                                    <th class="pe-4 text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${items}" class="cart-row"
+                                    th:classappend="${item.sach.trangThai == 'NGUNG_BAN'} ? 'bg-light opacity-75' : ''"
+                                    th:data-line-total="${item.sach.trangThai != 'NGUNG_BAN' ? item.thanhTien : 0}">
+                                    <td class="ps-4">
+                                        <!-- Nếu sách đang bán: checkbox bình thường -->
+                                        <input th:if="${item.sach.trangThai != 'NGUNG_BAN'}"
+                                               class="form-check-input cart-check cart-item-check" type="checkbox" name="items"
+                                               form="checkoutForm" checked
+                                               th:value="${item.sach.maSach}" th:id="'cartItem_' + ${item.sach.maSach}">
+                                        <!-- Nếu sách đã ngừng bán: icon cảnh báo / không thể chọn -->
+                                        <span th:if="${item.sach.trangThai == 'NGUNG_BAN'}" class="text-danger" title="Sản phẩm đã ngừng bán">
+                                            <i class="fa-solid fa-ban"></i>
+                                        </span>
+                                    </td>
+                                    <td class="py-3">
+                                        <div class="d-flex align-items-center gap-3 mb-0">
+                                            <img th:src="${item.sach.hinhAnh != null ? item.sach.hinhAnh : 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200'}" 
+                                                 alt="Cover" class="rounded-3 shadow-sm" style="width: 55px; height: 75px; object-fit: cover;">
+                                            <span>
+                                                <a th:href="@{/shop/book/{id}(id=${item.sach.maSach})}" 
+                                                   class="fw-bold text-dark text-decoration-none text-truncate d-block" 
+                                                   style="max-width: 230px;" th:text="${item.sach.tenSach}">
+                                                    Tên sách
+                                                </a>
+                                                <small class="text-muted d-block" th:text="${item.sach.tacGia}">Tác giả</small>
+                                                <!-- Thông báo Ngừng bán trực tiếp trên cuốn sách -->
+                                                <span th:if="${item.sach.trangThai == 'NGUNG_BAN'}" 
+                                                      class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle rounded-pill px-2 py-1 mt-1 d-inline-block">
+                                                    <i class="fa-solid fa-circle-exclamation me-1"></i>Sản phẩm ngừng bán
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="fw-semibold text-secondary" 
+                                        th:text="${#numbers.formatDecimal(item.donGia, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                        150.000 đ
+                                    </td>
+                                    <td>
+                                        <!-- Đang bán: cập nhật số lượng trực quan với nút - / + tự động lưu -->
+                                        <form th:if="${item.sach.trangThai != 'NGUNG_BAN'}" th:action="@{/shop/cart/update}" method="post" 
+                                              class="d-flex flex-column align-items-start cart-qty-form"
+                                              th:data-book-id="${item.sach.maSach}">
+                                            <input type="hidden" name="maSach" th:value="${item.sach.maSach}">
+                                            <div class="input-group input-group-sm" style="width: 125px;">
+                                                <button class="btn btn-outline-secondary btn-qty-minus px-2" type="button" title="Giảm số lượng">
+                                                    <i class="fa-solid fa-minus fa-xs"></i>
+                                                </button>
+                                                <input type="number" name="soLuong" th:value="${item.soLuong}" min="1" th:max="${item.sach.soLuong}"
+                                                       class="form-control text-center px-1 fw-bold cart-qty-input" 
+                                                       title="Nhập số lượng rồi Enter để lưu">
+                                                <button class="btn btn-outline-secondary btn-qty-plus px-2" type="button" title="Tăng số lượng">
+                                                    <i class="fa-solid fa-plus fa-xs"></i>
+                                                </button>
+                                            </div>
+                                            <div class="stock-limit-msg text-danger fw-semibold mt-1"
+                                                 th:classappend="${item.soLuong > item.sach.soLuong} ? '' : 'd-none'"
+                                                 style="font-size: 11.5px; line-height: 1.3;">
+                                                <i class="fa-solid fa-circle-exclamation me-1"></i>Kho chỉ còn <span th:text="${item.sach.soLuong}">0</span> cuốn
+                                            </div>
+                                        </form>
+                                        <!-- Ngừng bán: hiển thị nhãn -->
+                                        <span th:if="${item.sach.trangThai == 'NGUNG_BAN'}" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-2 py-1">
+                                            Ngừng bán
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold" th:classappend="${item.sach.trangThai != 'NGUNG_BAN'} ? 'text-danger' : 'text-muted'"
+                                        th:text="${#numbers.formatDecimal(item.thanhTien, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                        300.000 đ
+                                    </td>
+                                    <td class="pe-4 text-center">
+                                        <form th:action="@{/shop/cart/remove}" method="post">
+                                            <input type="hidden" name="maSach" th:value="${item.sach.maSach}">
+                                            <button type="submit" class="btn btn-sm text-danger border-0 bg-transparent" title="Xóa khỏi giỏ hàng">
+                                                <i class="fa-solid fa-trash-can fa-lg"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <a th:href="@{/shop/books}" class="text-primary text-decoration-none small fw-semibold">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Tiếp tục chọn thêm sách
+                    </a>
+                </div>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="col-lg-4">
+                <form id="checkoutForm" th:action="@{/shop/checkout}" method="get"
+                      class="card border-0 shadow-sm rounded-4 p-4 bg-white sticky-top" style="top: 85px;">
+                    <h5 class="fw-bold mb-3 text-dark">Tóm tắt đơn hàng</h5>
+
+                    <div th:replace="~{fragments/coupon-picker :: picker(${savedCoupons}, null, 'coupon')}"></div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tạm tính (<span id="cartSelectedCount" th:text="${items.size()}">0</span> sản phẩm):</span>
+                        <span class="fw-semibold text-dark" id="cartSubtotal"
+                              th:text="${#numbers.formatDecimal(subtotal, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                            300.000 đ
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-success" id="cartDiscountRow" style="display: none !important;">
+                        <span>Giảm giá (<span id="cartDiscountCode"></span>):</span>
+                        <span class="fw-semibold" id="cartDiscount">-0 đ</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span class="text-muted">Phí giao hàng:</span>
+                        <span class="text-muted small" id="cartShipping">Tính tại bước đặt hàng</span>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <span class="fw-bold text-dark">Tổng tạm tính:</span>
+                        <span class="h4 fw-bold text-danger mb-0" id="cartTotal"
+                              th:text="${#numbers.formatDecimal(subtotal, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                            300.000 đ
+                        </span>
+                    </div>
+
+                    <button type="submit" id="btnCartCheckout" class="btn btn-primary btn-lg w-100 rounded-pill fw-semibold shadow-sm">
+                        <i class="fa-solid fa-credit-card me-2"></i> Mua hàng (<span id="cartCheckoutCount" th:text="${items.size()}">0</span>)
+                    </button>
+                    <small class="text-danger d-none mt-2 text-center" id="cartSelectHint">Vui lòng chọn ít nhất 1 cuốn sách</small>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:src="@{/js/coupon-picker.js}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('checkoutForm');
+    if (!form) return;
+
+    const STORAGE_KEY = 'cartUnchecked';      // ghi nhớ sách bỏ chọn qua các lần cập nhật/xóa (reload trang)
+    const selectAll = document.getElementById('cartSelectAll');
+    const itemChecks = Array.from(document.querySelectorAll('.cart-item-check'));
+    const picker = document.getElementById('couponPicker');
+    const fmt = CouponPicker.formatVnd;
+
+    // Khôi phục lựa chọn trước đó
+    let unchecked = [];
+    try { unchecked = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { unchecked = []; }
+    itemChecks.forEach(cb => { if (unchecked.includes(cb.value)) cb.checked = false; });
+
+    function update() {
+        let subtotal = 0, count = 0;
+        itemChecks.forEach(cb => {
+            const row = cb.closest('.cart-row');
+            row.classList.toggle('is-unselected', !cb.checked);
+            if (cb.checked) {
+                subtotal += parseFloat(row.dataset.lineTotal || '0');
+                count++;
+            }
+        });
+        selectAll.checked = count === itemChecks.length;
+        selectAll.indeterminate = count > 0 && count < itemChecks.length;
+
+        const coupon = CouponPicker.refresh(picker, subtotal);
+        const discountRow = document.getElementById('cartDiscountRow');
+        if (coupon.code && coupon.discount > 0) {
+            discountRow.style.setProperty('display', 'flex', 'important');
+            document.getElementById('cartDiscountCode').textContent = coupon.code;
+            document.getElementById('cartDiscount').textContent = '-' + fmt(coupon.discount);
+        } else {
+            discountRow.style.setProperty('display', 'none', 'important');
+        }
+        document.getElementById('cartShipping').textContent =
+            coupon.freeship ? 'Miễn phí (FREESHIP)' : 'Tính tại bước đặt hàng';
+
+        document.getElementById('cartSelectedCount').textContent = count;
+        document.getElementById('cartCheckoutCount').textContent = count;
+        document.getElementById('cartSubtotal').textContent = fmt(subtotal);
+        document.getElementById('cartTotal').textContent = fmt(Math.max(subtotal - coupon.discount, 0));
+        document.getElementById('btnCartCheckout').disabled = count === 0;
+        document.getElementById('cartSelectHint').classList.toggle('d-none', count > 0);
+
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(itemChecks.filter(cb => !cb.checked).map(cb => cb.value)));
+    }
+
+    selectAll.addEventListener('change', () => {
+        itemChecks.forEach(cb => cb.checked = selectAll.checked);
+        update();
+    });
+    itemChecks.forEach(cb => cb.addEventListener('change', update));
+    if (picker) picker.addEventListener('change', update);
+
+    form.addEventListener('submit', e => {
+        if (!itemChecks.some(cb => cb.checked)) e.preventDefault();
+        else sessionStorage.removeItem(STORAGE_KEY);
+    });
+
+    // Tự động submit cập nhật giỏ hàng khi người dùng bấm + hoặc - hoặc gõ số lượng mới
+    const STOCK_WARN_KEY = 'cartStockWarnBookId';
+    const warnedBookId = sessionStorage.getItem(STOCK_WARN_KEY);
+    if (warnedBookId) {
+        sessionStorage.removeItem(STOCK_WARN_KEY);
+    }
+
+    document.querySelectorAll('.cart-qty-form').forEach(qtyForm => {
+        const input = qtyForm.querySelector('.cart-qty-input');
+        const btnMinus = qtyForm.querySelector('.btn-qty-minus');
+        const btnPlus = qtyForm.querySelector('.btn-qty-plus');
+        const stockMsg = qtyForm.querySelector('.stock-limit-msg');
+        const bookId = qtyForm.getAttribute('data-book-id');
+        const max = parseInt(input.getAttribute('max') || '9999', 10);
+        const min = parseInt(input.getAttribute('min') || '1', 10);
+        const initialVal = parseInt(input.value || '1', 10);
+
+        function showStockWarning() {
+            if (stockMsg) {
+                stockMsg.innerHTML = '<i class="fa-solid fa-circle-exclamation me-1"></i>Kho chỉ còn <strong>' + max + '</strong> cuốn';
+                stockMsg.classList.remove('d-none');
+            }
+            input.classList.add('border-danger', 'text-danger');
+        }
+
+        function hideStockWarning() {
+            if (stockMsg) stockMsg.classList.add('d-none');
+            input.classList.remove('border-danger', 'text-danger');
+        }
+
+        if (warnedBookId && warnedBookId === bookId) {
+            showStockWarning();
+        }
+
+        if (btnMinus) {
+            btnMinus.addEventListener('click', () => {
+                let val = parseInt(input.value || '1', 10);
+                if (val > min) {
+                    hideStockWarning();
+                    input.value = val - 1;
+                    qtyForm.submit();
+                }
+            });
+        }
+
+        if (btnPlus) {
+            btnPlus.addEventListener('click', () => {
+                let val = parseInt(input.value || '1', 10);
+                if (val < max) {
+                    hideStockWarning();
+                    input.value = val + 1;
+                    qtyForm.submit();
+                } else {
+                    input.value = max;
+                    showStockWarning();
+                }
+            });
+        }
+
+        input.addEventListener('input', () => {
+            let val = parseInt(input.value, 10);
+            if (!isNaN(val) && val > max) {
+                showStockWarning();
+            } else {
+                hideStockWarning();
+            }
+        });
+
+        input.addEventListener('change', () => {
+            let val = parseInt(input.value || '1', 10);
+            if (isNaN(val) || val < min) val = min;
+            if (val > max) {
+                val = max;
+                input.value = max;
+                showStockWarning();
+                if (val !== initialVal) {
+                    sessionStorage.setItem(STOCK_WARN_KEY, bookId);
+                    qtyForm.submit();
+                }
+                return;
+            }
+            hideStockWarning();
+            input.value = val;
+            qtyForm.submit();
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                input.dispatchEvent(new Event('change'));
+            }
+        });
+    });
+
+    update();
+});
+</script>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

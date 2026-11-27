@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Hóa đơn bán hàng #' + ${order.maDH})}"></head>
+<body class="bg-light">
+<div th:replace="~{fragments/navbar :: navbar}" class="d-print-none"></div>
+
+<div class="main-content py-4 py-md-5">
+    <div class="container" style="max-width: 850px;">
+        
+        <!-- Action Buttons (Không in) -->
+        <div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+            <a th:href="@{/shop/order/{id}(id=${order.maDH})}" class="btn btn-outline-secondary rounded-pill px-3 py-1.5 small">
+                <i class="fa-solid fa-arrow-left me-1"></i> Chi tiết đơn hàng
+            </a>
+            <div class="d-flex gap-2">
+                <a th:href="@{/shop/books}" class="btn btn-outline-primary rounded-pill px-3 py-1.5 small">
+                    <i class="fa-solid fa-book-open me-1"></i> Tiếp tục mua sách
+                </a>
+                <button type="button" onclick="window.print()" class="btn btn-success rounded-pill px-4 py-1.5 small fw-semibold shadow-sm">
+                    <i class="fa-solid fa-print me-1"></i> In hóa đơn
+                </button>
+            </div>
+        </div>
+
+        <!-- Sheet Hóa Đơn (Chuẩn A4 / Print Friendly) -->
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white p-4 p-md-5 position-relative invoice-paper">
+            
+            <!-- Con dấu điện tử: ĐÃ THANH TOÁN (cho đơn Đã xác nhận / Đang giao) hoặc GIAO HÀNG THÀNH CÔNG (cho đơn Đã giao) -->
+            <div class="position-absolute d-flex align-items-center justify-content-center paid-stamp"
+                 th:if="${order.trangThai == 'DA_GIAO' or order.trangThai == 'DA_XAC_NHAN' or order.trangThai == 'DANG_GIAO' or (payment != null and payment.trangThai == 'THANH_CONG')}">
+                <div class="stamp-inner"
+                     th:classappend="${order.trangThai == 'DA_GIAO'} ? 'stamp-delivered' : 'stamp-paid'">
+                    <span class="stamp-text-top">NHÃ NAM BOOKSTORE</span>
+                    <h5 class="stamp-main-text mb-0"
+                        th:text="${order.trangThai == 'DA_GIAO'} ? 'GIAO HÀNG THÀNH CÔNG' : 'ĐÃ THANH TOÁN'">ĐÃ THANH TOÁN</h5>
+                    <span class="stamp-text-bottom"
+                          th:text="${#temporals.format(payment != null and payment.thoiGianTT != null ? payment.thoiGianTT : order.ngayDat, 'dd/MM/yyyy')}">04/10/2026</span>
+                </div>
+            </div>
+
+            <!-- Header Hóa Đơn -->
+            <div class="row pb-4 border-bottom align-items-center">
+                <div class="col-sm-7">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="fa-solid fa-book-bookmark text-success fa-2x"></i>
+                        <span class="fs-3 fw-bold text-dark tracking-tight">Nhã Nam BookStore</span>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Cửa hàng sách trực tuyến văn học, tri thức & nghệ thuật<br>
+                        Hotline: 1900 6868 | Email: hotro@nhanam.vn<br>
+                        Địa chỉ: Hà Nội, Việt Nam
+                    </p>
+                </div>
+                <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                    <h3 class="fw-bold text-primary mb-1">HÓA ĐƠN BÁN HÀNG</h3>
+                    <div class="fs-6 fw-bold text-dark">Số: <span class="text-danger" th:text="'#HD' + ${order.maDH}">#HD45</span></div>
+                    <small class="text-muted d-block">Ngày lập: <span th:text="${#temporals.format(order.ngayDat, 'dd/MM/yyyy HH:mm')}">04/10/2026 02:56</span></small>
+                </div>
+            </div>
+
+            <!-- Customer & Delivery Info -->
+            <div class="row py-4 border-bottom g-3">
+                <div class="col-sm-6">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Thông tin khách hàng:</h6>
+                    <div class="fw-bold text-dark fs-6" th:text="${order.khachHang != null ? order.khachHang.hoTen : order.hoTenNguoiNhan}">Nguyễn Văn A</div>
+                    <div class="small text-muted" th:if="${order.khachHang != null and order.khachHang.taiKhoan != null}" th:text="'Email: ' + ${order.khachHang.taiKhoan.email}">email@example.com</div>
+                    <div class="small text-muted" th:text="'SĐT: ' + ${order.sdtNguoiNhan}">0974965023</div>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <h6 class="fw-bold text-secondary text-uppercase small mb-2">Địa chỉ giao hàng:</h6>
+                    <div class="fw-bold text-dark" th:text="${order.hoTenNguoiNhan}">Người nhận</div>
+                    <div class="small text-muted" th:text="${order.diaChiGiaoHang}">Địa chỉ giao hàng</div>
+                    <div class="small text-muted" th:text="'Ghi chú: ' + (${order.ghiChuHienThi != null and !order.ghiChuHienThi.isBlank()} ? ${order.ghiChuHienThi} : 'Không có')">Ghi chú</div>
+                </div>
+            </div>
+
+            <!-- Table Items -->
+            <div class="table-responsive my-4">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead class="table-light text-center small text-secondary">
+                        <tr>
+                            <th style="width: 50px;">STT</th>
+                            <th class="text-start">Tên sách</th>
+                            <th style="width: 140px;">Đơn giá</th>
+                            <th style="width: 80px;">Số lượng</th>
+                            <th style="width: 150px;" class="text-end">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody class="small">
+                        <tr th:each="item, iter : ${items}">
+                            <td class="text-center text-muted" th:text="${iter.count}">1</td>
+                            <td>
+                                <div class="fw-bold text-dark" th:text="${item.sach.tenSach}">Tên sách</div>
+                                <small class="text-muted" th:if="${item.sach.tacGia != null}" th:text="'Tác giả: ' + ${item.sach.tacGia}">Tác giả</small>
+                            </td>
+                            <td class="text-center" th:text="${#numbers.formatDecimal(item.donGia, 0, 'POINT', 0, 'POINT') + ' đ'}">75.000 đ</td>
+                            <td class="text-center fw-bold" th:text="${item.soLuong}">1</td>
+                            <td class="text-end fw-bold text-dark" th:text="${#numbers.formatDecimal(item.thanhTien, 0, 'POINT', 0, 'POINT') + ' đ'}">75.000 đ</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary & Payment Info -->
+            <div class="row pt-2 pb-4 border-bottom">
+                <div class="col-sm-6 mb-3 mb-sm-0">
+                    <div class="p-3 bg-light rounded-4 border">
+                        <h6 class="fw-bold text-dark small mb-2">
+                            <i class="fa-solid fa-credit-card text-primary me-1"></i> Phương thức thanh toán:
+                        </h6>
+                        <div class="small mb-1">
+                            <span class="text-muted">Hình thức:</span>
+                            <span class="fw-bold text-dark" th:text="${payment != null ? payment.ptthThanhToan.tenPTTT : 'Tiền mặt'}">MoMo</span>
+                        </div>
+                        <div class="small mb-1" th:if="${payment != null and payment.maGiaoDich != null}">
+                            <span class="text-muted">Mã giao dịch:</span>
+                            <span class="font-monospace text-primary fw-semibold" th:text="${payment.maGiaoDich}">MOMO-45</span>
+                        </div>
+                        <div class="small mb-1">
+                            <span class="text-muted">Trạng thái:</span>
+                            <span class="badge bg-success" th:if="${order.trangThai == 'DA_GIAO'}">
+                                <i class="fa-solid fa-circle-check me-1"></i> Giao hàng thành công
+                            </span>
+                            <span class="badge bg-success" th:if="${order.trangThai != 'DA_GIAO' and (order.trangThai == 'DA_XAC_NHAN' or order.trangThai == 'DANG_GIAO' or (payment != null and payment.trangThai == 'THANH_CONG'))}">
+                                <i class="fa-solid fa-circle-check me-1"></i> Đã thanh toán
+                            </span>
+                            <span class="badge bg-warning text-dark" th:if="${order.trangThai == 'CHO_XAC_NHAN' and (payment == null or payment.trangThai != 'THANH_CONG')}">
+                                <i class="fa-solid fa-clock me-1"></i> Chờ thanh toán
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex flex-column gap-2 small">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Tạm tính:</span>
+                            <span class="fw-semibold text-dark" th:text="${#numbers.formatDecimal(order.giaTamTinh, 0, 'POINT', 0, 'POINT') + ' đ'}">75.000 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between" th:if="${order.giamGia != null and order.giamGia > 0}">
+                            <span class="text-muted">Giảm giá mã coupon:</span>
+                            <span class="fw-semibold text-success" th:text="'-' + ${#numbers.formatDecimal(order.giamGia, 0, 'POINT', 0, 'POINT') + ' đ'}">-0 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Phí vận chuyển:</span>
+                            <span class="fw-semibold text-dark" th:text="${#numbers.formatDecimal(order.phiVC, 0, 'POINT', 0, 'POINT') + ' đ'}">25.000 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <span class="fs-6 fw-bold text-dark">TỔNG THANH TOÁN:</span>
+                            <span class="fs-5 fw-bold text-danger" th:text="${#numbers.formatDecimal(order.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">100.000 đ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Hóa Đơn -->
+            <div class="text-center pt-4 text-muted small">
+                <p class="mb-1 fw-medium text-dark">Cảm ơn Quý khách đã mua sắm tại Nhã Nam BookStore!</p>
+                <p class="mb-0 text-secondary" style="font-size: 12px;">Hóa đơn điện tử có giá trị lưu trữ và đối soát bảo hành. Mọi thắc mắc vui lòng liên hệ hotline 1900 6868.</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}" class="d-print-none"></div>
+
+<style>
+.paid-stamp {
+    top: 30px;
+    right: 250px;
+    transform: rotate(-15deg);
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.85;
+}
+.stamp-inner {
+    border: 3px double #198754;
+    color: #198754;
+    padding: 6px 16px;
+    border-radius: 8px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.78);
+}
+.stamp-delivered {
+    border-color: #059669 !important;
+    color: #059669 !important;
+}
+.stamp-cod {
+    border-color: #0d6efd !important;
+    color: #0d6efd !important;
+}
+.stamp-main-text {
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+.stamp-text-top, .stamp-text-bottom {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: block;
+}
+
+@media print {
+    body {
+        background-color: #ffffff !important;
+    }
+    .d-print-none {
+        display: none !important;
+    }
+    .main-content {
+        padding: 0 !important;
+    }
+    .invoice-paper {
+        box-shadow: none !important;
+        border: 0 !important;
+        padding: 0 !important;
+    }
+}
+</style>
+
+</body>
+</html>

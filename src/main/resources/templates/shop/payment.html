@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head th:replace="~{fragments/head :: head('Thanh toán đơn hàng #' + ${order.maDH})}"></head>
+
+<body class="bg-light">
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <style>
+        /* Dedicated MoMo Payment Gateway Styles */
+        .momo-gateway-wrapper {
+            max-width: 880px;
+            margin: 0 auto;
+        }
+        .momo-brand-header {
+            background: linear-gradient(135deg, #a50064 0%, #d82d8b 100%);
+            color: #ffffff;
+        }
+        .momo-logo-box {
+            width: 44px;
+            height: 44px;
+            background: #ffffff;
+            color: #a50064;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 13px;
+            line-height: 1.05;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: -0.5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+        .momo-info-panel {
+            background: #fdf2f8;
+            border-right: 1px solid #fbcfe8;
+        }
+        .momo-qr-frame {
+            position: relative;
+            display: inline-block;
+            padding: 18px;
+            background: #ffffff;
+            border-radius: 20px;
+            border: 2px solid #f472b6;
+            box-shadow: 0 10px 25px rgba(165, 0, 100, 0.12);
+        }
+        .momo-qr-corner {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-color: #a50064;
+            border-style: solid;
+            border-width: 0;
+        }
+        .momo-qr-corner.tl { top: -2px; left: -2px; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 16px; }
+        .momo-qr-corner.tr { top: -2px; right: -2px; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: 16px; }
+        .momo-qr-corner.bl { bottom: -2px; left: -2px; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: 16px; }
+        .momo-qr-corner.br { bottom: -2px; right: -2px; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: 16px; }
+
+        .momo-qr-center-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 48px;
+            height: 48px;
+            background: #a50064;
+            color: #ffffff;
+            border: 3px solid #ffffff;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 11px;
+            line-height: 1.05;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(165, 0, 100, 0.35);
+            z-index: 3;
+            pointer-events: none;
+        }
+        .momo-scan-line {
+            position: absolute;
+            left: 16px;
+            right: 16px;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #d82d8b, #a50064, #d82d8b, transparent);
+            box-shadow: 0 0 10px #d82d8b;
+            z-index: 2;
+            animation: momoScanAnim 2.4s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes momoScanAnim {
+            0% { top: 18px; opacity: 0.3; }
+            50% { top: calc(100% - 21px); opacity: 1; }
+            100% { top: 18px; opacity: 0.3; }
+        }
+        .btn-momo {
+            background: linear-gradient(135deg, #a50064, #d82d8b);
+            color: #ffffff;
+            border: none;
+            transition: all 0.25s ease;
+        }
+        .btn-momo:hover, .btn-momo:focus {
+            background: linear-gradient(135deg, #880052, #b81d73);
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(165, 0, 100, 0.28);
+        }
+        .momo-timer-box {
+            background: #fce7f3;
+            color: #9d174d;
+            border: 1px solid #f9a8d4;
+            border-radius: 12px;
+            padding: 10px 14px;
+        }
+    </style>
+
+    <div class="main-content py-4 py-md-5">
+
+        <!-- =================================================================== -->
+        <!-- 1. CỔNG THANH TOÁN VÍ ĐIỆN TỬ MOMO RIÊNG BIỆT (KHÔNG DÙNG VIETQR)   -->
+        <!-- =================================================================== -->
+        <div class="container momo-gateway-wrapper" th:if="${isMoMo}">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
+                <!-- MoMo Top Bar -->
+                <div class="momo-brand-header px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="momo-logo-box">
+                            <span>mo</span>
+                            <span>mo</span>
+                        </div>
+                        <div>
+                            <h5 class="fw-bold mb-0">CỔNG THANH TOÁN VÍ ĐIỆN TỬ MOMO</h5>
+                            <small class="text-white-50">Siêu ứng dụng thanh toán số 1 Việt Nam &bull; Mã QR Ví MoMo độc quyền</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-white text-dark rounded-pill px-3 py-2 fw-semibold shadow-sm" style="color: #a50064 !important;">
+                        <i class="fa-solid fa-shield-halved me-1"></i> Bảo mật chuẩn PCI-DSS
+                    </span>
+                </div>
+
+                <!-- MoMo 2-Column Body -->
+                <div class="row g-0">
+                    <!-- Cột trái: Thông tin đơn hàng & Ví thụ hưởng -->
+                    <div class="col-lg-5 momo-info-panel p-4 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between pb-3 mb-3 border-bottom border-danger border-opacity-25">
+                                <span class="text-muted small fw-semibold">Đơn vị chấp nhận</span>
+                                <span class="fw-bold text-dark"><i class="fa-solid fa-book-open text-success me-1"></i> Nhã Nam BookStore</span>
+                            </div>
+
+                            <div class="mb-3 pb-3 border-bottom border-danger border-opacity-25">
+                                <small class="text-muted d-block mb-1">Số tiền thanh toán</small>
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold fs-3" style="color: #a50064;"
+                                          th:text="${#numbers.formatDecimal(order.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">900.000 đ</span>
+                                    <span class="d-none" id="valMomoAmount"
+                                          th:text="${#numbers.formatDecimal(order.tongTien, 0, 'NONE', 0, 'NONE')}">900000</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn" data-target="valMomoAmount">
+                                        <i class="fa-regular fa-copy me-1"></i>Chép
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex flex-column gap-2.5 small mb-4">
+                                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom border-danger border-opacity-10">
+                                    <span class="text-muted">Mã đơn hàng:</span>
+                                    <span class="fw-bold text-dark fs-6">#<span th:text="${order.maDH}">58</span></span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom border-danger border-opacity-10">
+                                    <span class="text-muted">Mã giao dịch MoMo:</span>
+                                    <span class="badge bg-white border text-dark fw-semibold" th:text="'MOMO_DH' + ${order.maDH}">MOMO_DH58</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom border-danger border-opacity-10">
+                                    <span class="text-muted">Chủ ví MoMo:</span>
+                                    <span class="fw-bold text-dark" th:text="${@environment.getProperty('momo.wallet.name', 'NHÃ NAM BOOKSTORE')}">NHÃ NAM BOOKSTORE</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1.5 border-bottom border-danger border-opacity-10">
+                                    <span class="text-muted">SĐT Ví MoMo:</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold fs-6" style="color: #a50064;" id="valMomoPhone"
+                                              th:text="${@environment.getProperty('momo.wallet.phone', 'Đang cập nhật')}">Đang cập nhật</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn" data-target="valMomoPhone">
+                                            <i class="fa-regular fa-copy me-1"></i>Chép
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-1.5">
+                                    <span class="text-muted">Lời nhắn chuyển tiền:</span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="fw-bold text-success fs-6" id="valMomoMemo" th:text="'DH' + ${order.maDH}">DH58</span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn" data-target="valMomoMemo">
+                                            <i class="fa-regular fa-copy me-1"></i>Chép
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Đồng hồ đếm ngược phiên giao dịch MoMo -->
+                        <div class="momo-timer-box text-center mt-auto">
+                            <div class="small fw-medium mb-1">
+                                <i class="fa-regular fa-clock me-1"></i> Đơn hàng sẽ hết hạn sau:
+                            </div>
+                            <div class="fw-bold fs-4" id="momoCountdownTimer">10 : 00</div>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Khung Mã QR MoMo Độc Quyền -->
+                    <div class="col-lg-7 p-4 p-md-5 text-center d-flex flex-column align-items-center justify-content-center">
+                        <h6 class="fw-bold mb-1" style="color: #a50064;">
+                            <i class="fa-solid fa-qrcode me-1"></i> Quét mã QR bằng ứng dụng Ví MoMo
+                        </h6>
+                        <p class="text-muted small mb-3">Sử dụng App MoMo trên điện thoại để quét mã thanh toán tự động</p>
+
+                        <!-- Khung QR MoMo với 4 góc hồng, tia laser quét & Logo MoMo ở tâm -->
+                        <div class="momo-qr-frame mb-3">
+                            <span class="momo-qr-corner tl"></span>
+                            <span class="momo-qr-corner tr"></span>
+                            <span class="momo-qr-corner bl"></span>
+                            <span class="momo-qr-corner br"></span>
+                            <div class="momo-scan-line"></div>
+
+                            <img th:if="${paymentQrUrl != null}" th:src="${paymentQrUrl}" alt="Mã QR Ví MoMo"
+                                 class="img-fluid rounded-3" style="width: 240px; height: 240px; object-fit: contain;">
+
+                            <!-- Logo MoMo hồng chính giữa mã QR -->
+                            <div class="momo-qr-center-badge">
+                                <span>mo</span>
+                                <span>mo</span>
+                            </div>
+
+                            <div class="mt-2 pt-2 border-top d-flex align-items-center justify-content-center gap-2 small fw-bold" style="color: #a50064;">
+                                <i class="fa-solid fa-wallet"></i>
+                                <span th:text="'MOMO WALLET QR • ' + ${@environment.getProperty('momo.wallet.name', 'NHÃ NAM BOOKSTORE')}">MOMO WALLET QR &bull; NHÃ NAM BOOKSTORE</span>
+                            </div>
+                        </div>
+
+                        <!-- Hướng dẫn 3 bước chuẩn MoMo -->
+                        <div class="d-flex flex-wrap justify-content-center gap-3 small text-secondary mb-4">
+                            <span><strong style="color: #a50064;">1.</strong> Mở Ví MoMo</span>
+                            <span><i class="fa-solid fa-chevron-right text-muted" style="font-size: 10px;"></i></span>
+                            <span><strong style="color: #a50064;">2.</strong> Chọn <b>Quét Mã</b></span>
+                            <span><i class="fa-solid fa-chevron-right text-muted" style="font-size: 10px;"></i></span>
+                            <span><strong style="color: #a50064;">3.</strong> Quét & Xác nhận</span>
+                        </div>
+
+                        <!-- Nút xác nhận thanh toán trên cổng MoMo -->
+                        <div class="w-100 d-flex flex-column gap-2" style="max-width: 360px;">
+                            <button type="button" id="btnConfirmMoMoPayment"
+                                    class="btn btn-momo rounded-pill py-2.5 px-4 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>Xác nhận đã thanh toán qua Ví MoMo</span>
+                            </button>
+
+                            <a th:if="${momoPayUrl != null}" th:href="${momoPayUrl}" target="_blank"
+                               class="btn btn-outline-danger btn-sm rounded-pill py-1.5 fw-semibold">
+                                <i class="fa-solid fa-up-right-from-square me-1"></i> Mở cổng thanh toán MoMo Sandbox
+                            </a>
+                        </div>
+
+                        <!-- Trạng thái lắng nghe tự động -->
+                        <div class="mt-3 d-inline-flex align-items-center gap-2 small text-muted">
+                            <span class="spinner-grow spinner-grow-sm" style="color: #d82d8b;" role="status"></span>
+                            <span>Đang chờ tín hiệu xác nhận giao dịch từ Ví MoMo...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MoMo Footer Actions -->
+                <div class="bg-light px-4 py-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a th:href="@{/shop/order/{id}(id=${order.maDH})}"
+                           class="btn btn-link text-decoration-none text-muted small p-0">
+                            <i class="fa-solid fa-arrow-left me-1"></i> Quay lại chi tiết đơn hàng
+                        </a>
+                        <button class="btn btn-outline-secondary btn-sm rounded-pill px-3" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#changeMethodCollapseMoMo">
+                            <i class="fa-solid fa-arrows-rotate me-1"></i> Đổi phương thức thanh toán
+                        </button>
+                    </div>
+
+                    <!-- Collapse đổi phương thức thanh toán -->
+                    <div class="collapse text-start mt-3" id="changeMethodCollapseMoMo">
+                        <div class="p-3 bg-white rounded-4 border">
+                            <div class="small fw-semibold text-dark mb-2">Chọn phương thức thanh toán khác:</div>
+                            <form th:action="@{/shop/order/{id}/change-payment-method(id=${order.maDH})}" method="post">
+                                <div class="d-flex flex-column gap-2 mb-3">
+                                    <div class="payment-switch-item d-flex align-items-center gap-2"
+                                         th:each="pt : ${paymentMethods}">
+                                        <input class="form-check-input ms-0 mt-0" type="radio" name="maPTTT"
+                                               th:id="'momo_page_pttt_' + ${pt.maPTTT}" th:value="${pt.maPTTT}"
+                                               th:checked="${payment != null and payment.ptthThanhToan.maPTTT == pt.maPTTT}"
+                                               required>
+                                        <label class="form-check-label w-100 cursor-pointer mb-0 small"
+                                               th:for="'momo_page_pttt_' + ${pt.maPTTT}">
+                                            <span class="fw-bold text-dark" th:text="${pt.tenPTTT}">Tên</span>
+                                            <span class="text-muted ms-1" th:text="'(' + ${pt.moTa} + ')'">Mô tả</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 rounded-pill py-1.5 small fw-semibold">
+                                    Xác nhận đổi phương thức
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================================== -->
+        <!-- 2. CỔNG THANH TOÁN VIETQR (BIDV NAPAS 247)                          -->
+        <!-- =================================================================== -->
+        <div class="container" style="max-width: 680px;" th:if="${!isMoMo}">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden bg-white">
+                <!-- Header -->
+                <div class="p-4 text-center text-white"
+                     style="background: linear-gradient(135deg, #059669, #047857);">
+                    <div class="d-inline-flex p-2 bg-white bg-opacity-25 rounded-circle mb-2">
+                        <i class="fa-solid fa-qrcode fa-2x"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">CỔNG THANH TOÁN VIETQR (BIDV)</h4>
+                    <p class="small mb-0 text-white-50">
+                        Quét mã bằng ứng dụng bất kỳ Ngân hàng nào hỗ trợ Napas247 / VietQR
+                    </p>
+                </div>
+
+                <!-- Body: QR & Info -->
+                <div class="p-4 p-md-5 text-center">
+                    <!-- Order & Amount badge -->
+                    <div class="d-flex justify-content-between align-items-center bg-light rounded-4 p-3 mb-4 border">
+                        <div class="text-start">
+                            <small class="text-muted d-block">Mã đơn hàng</small>
+                            <span class="fw-bold text-dark fs-5">#<span th:text="${order.maDH}">1</span></span>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Số tiền cần thanh toán</small>
+                            <span class="fw-bold text-danger fs-4"
+                                  th:text="${#numbers.formatDecimal(order.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                140.000 đ
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- QR Container -->
+                    <div class="d-inline-block p-3 bg-white rounded-4 border shadow-sm mb-3">
+                        <img th:if="${paymentQrUrl != null}" th:src="${paymentQrUrl}" alt="Mã QR Thanh Toán"
+                             class="img-fluid rounded-3" style="width: 260px; height: 260px; object-fit: contain;">
+                        <div th:if="${paymentQrUrl == null}" class="p-5 text-muted small">
+                            <div class="spinner-border text-success mb-2" role="status"></div>
+                            <div>Đang khởi tạo mã QR thanh toán...</div>
+                        </div>
+                    </div>
+
+                    <!-- Real-time Live Listening Indicator -->
+                    <div class="alert alert-success bg-opacity-10 border border-success border-opacity-25 rounded-pill py-2 px-3 d-inline-flex align-items-center gap-2 mb-4">
+                        <span class="spinner-grow spinner-grow-sm text-success" role="status"></span>
+                        <span class="small text-success fw-medium">
+                            Hệ thống tự động nhận diện và xác nhận ngay khi tiền vào tài khoản
+                        </span>
+                    </div>
+
+                    <!-- Transfer Information Details -->
+                    <div class="bg-light rounded-4 p-3.5 text-start border mb-4">
+                        <div class="fw-semibold text-secondary small mb-2">
+                            <i class="fa-solid fa-circle-info text-primary me-1"></i> Thông tin chuyển khoản chính xác:
+                        </div>
+
+                        <div class="d-flex flex-column gap-2 small">
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="text-muted">Ngân hàng thụ hưởng:</span>
+                                <span class="fw-bold text-dark">BIDV (Napas247)</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="text-muted">Số tài khoản:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold text-primary fs-6" id="valSTK"
+                                          th:text="${@environment.getProperty('vietqr.bank.account-number', 'Đang cập nhật')}">Đang cập nhật</span>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn"
+                                            data-target="valSTK">
+                                        <i class="fa-regular fa-copy me-1"></i>Chép
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="text-muted">Chủ tài khoản:</span>
+                                <span class="fw-bold text-dark" th:text="${@environment.getProperty('vietqr.bank.account-name', 'NHA NAM BOOKSTORE')}">NHA NAM BOOKSTORE</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                <span class="text-muted">Số tiền:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold text-danger fs-6" id="valAmount"
+                                          th:text="${#numbers.formatDecimal(order.tongTien, 0, 'NONE', 0, 'NONE')}">140000</span>
+                                    <span>đ</span>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn"
+                                            data-target="valAmount">
+                                        <i class="fa-regular fa-copy me-1"></i>Chép
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center py-1">
+                                <span class="text-muted">Nội dung chuyển khoản:</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="fw-bold text-success fs-6" id="valMemo"
+                                          th:text="'DH' + ${order.maDH}">DH41</span>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill copy-btn"
+                                            data-target="valMemo">
+                                        <i class="fa-regular fa-copy me-1"></i>Chép
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Secondary actions -->
+                    <div class="d-flex justify-content-between align-items-center pt-2">
+                        <a th:href="@{/shop/order/{id}(id=${order.maDH})}"
+                           class="btn btn-link text-decoration-none text-muted small">
+                            <i class="fa-solid fa-arrow-left me-1"></i> Xem chi tiết đơn hàng
+                        </a>
+                        <button class="btn btn-outline-primary btn-sm rounded-pill px-3" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#changeMethodCollapse">
+                            <i class="fa-solid fa-arrows-rotate me-1"></i> Đổi phương thức
+                        </button>
+                    </div>
+
+                    <!-- Collapse đổi phương thức thanh toán -->
+                    <div class="collapse text-start mt-3" id="changeMethodCollapse">
+                        <div class="p-3 bg-light rounded-4 border">
+                            <div class="small fw-semibold text-dark mb-2">Chọn phương thức thanh toán khác:</div>
+                            <form th:action="@{/shop/order/{id}/change-payment-method(id=${order.maDH})}" method="post">
+                                <div class="d-flex flex-column gap-2 mb-3">
+                                    <div class="payment-switch-item d-flex align-items-center gap-2"
+                                         th:each="pt : ${paymentMethods}">
+                                        <input class="form-check-input ms-0 mt-0" type="radio" name="maPTTT"
+                                               th:id="'pay_page_pttt_' + ${pt.maPTTT}" th:value="${pt.maPTTT}"
+                                               th:checked="${payment != null and payment.ptthThanhToan.maPTTT == pt.maPTTT}"
+                                               required>
+                                        <label class="form-check-label w-100 cursor-pointer mb-0 small"
+                                               th:for="'pay_page_pttt_' + ${pt.maPTTT}">
+                                            <span class="fw-bold text-dark" th:text="${pt.tenPTTT}">Tên</span>
+                                            <span class="text-muted ms-1" th:text="'(' + ${pt.moTa} + ')'">Mô tả</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <button type="submit"
+                                        class="btn btn-primary w-100 rounded-pill py-1.5 small fw-semibold">
+                                    Xác nhận đổi phương thức
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full-screen Live Success Overlay -->
+    <div id="paymentSuccessOverlay"
+         class="position-fixed top-0 start-0 w-100 h-100 bg-white d-none flex-column align-items-center justify-content-center"
+         style="z-index: 9999;">
+        <div class="text-center p-4">
+            <div class="d-inline-flex p-3 bg-success text-white rounded-circle shadow-lg mb-3"
+                 style="width: 80px; height: 80px; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-check fa-3x"></i>
+            </div>
+            <h3 class="fw-bold text-success mb-2">Thanh toán thành công!</h3>
+            <p class="text-muted mb-3 fs-5">Hệ thống đã nhận được tiền vào tài khoản. Đơn hàng <strong
+                    class="text-dark">#<span th:text="${order.maDH}"></span></strong> đã được xác nhận thực tế!</p>
+            <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+            <div class="small text-secondary">Đang chuyển bạn về trang hóa đơn đơn hàng...</div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            /*[# th:if="${order != null}"]*/
+            const orderId = /*[[${order.maDH}]]*/ null;
+            /*[/]*/
+
+            // 1. Sao chép nhanh số tài khoản, số tiền, nội dung
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const targetId = this.dataset.target;
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        const text = el.textContent.trim();
+                        navigator.clipboard.writeText(text).then(() => {
+                            const originalHtml = this.innerHTML;
+                            this.innerHTML = '<i class="fa-solid fa-check me-1 text-success"></i>Đã chép!';
+                            setTimeout(() => {
+                                this.innerHTML = originalHtml;
+                            }, 1500);
+                        });
+                    }
+                });
+            });
+
+            // 2. Đồng hồ đếm ngược 10 phút trên cổng thanh toán MoMo
+            const countdownEl = document.getElementById('momoCountdownTimer');
+            if (countdownEl) {
+                let remainingSeconds = 600;
+                setInterval(() => {
+                    if (remainingSeconds > 0) {
+                        remainingSeconds--;
+                        const mins = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
+                        const secs = String(remainingSeconds % 60).padStart(2, '0');
+                        countdownEl.textContent = mins + ' : ' + secs;
+                    }
+                }, 1000);
+            }
+
+            // 3. Nút xác nhận đã thanh toán trên Cổng Ví MoMo
+            const btnConfirmMoMo = document.getElementById('btnConfirmMoMoPayment');
+            const overlay = document.getElementById('paymentSuccessOverlay');
+            let isRedirecting = false;
+
+            function triggerSuccessRedirect() {
+                if (isRedirecting) return;
+                isRedirecting = true;
+                if (overlay) {
+                    overlay.classList.remove('d-none');
+                    overlay.classList.add('d-flex');
+                }
+                setTimeout(() => {
+                    window.location.href = '/shop/order/' + orderId + '/invoice';
+                }, 1500);
+            }
+
+            if (btnConfirmMoMo && orderId) {
+                btnConfirmMoMo.addEventListener('click', async function () {
+                    btnConfirmMoMo.disabled = true;
+                    btnConfirmMoMo.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xác thực giao dịch MoMo...';
+                    try {
+                        const res = await fetch('/api/payment/momo/confirm/' + orderId, { method: 'POST' });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.paid === true) {
+                                triggerSuccessRedirect();
+                                return;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('MoMo confirm error:', e);
+                    }
+                    btnConfirmMoMo.disabled = false;
+                    btnConfirmMoMo.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>Xác nhận đã thanh toán qua Ví MoMo</span>';
+                });
+            }
+
+            // 4. Real-time Auto Polling kiểm tra trạng thái thanh toán
+            if (orderId) {
+                const pollTimer = setInterval(async () => {
+                    if (isRedirecting) {
+                        clearInterval(pollTimer);
+                        return;
+                    }
+                    try {
+                        const response = await fetch('/api/payment/status/' + orderId);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.paid === true) {
+                                clearInterval(pollTimer);
+                                triggerSuccessRedirect();
+                            }
+                        }
+                    } catch (err) {
+                        console.debug('Polling error:', err);
+                    }
+                }, 1500);
+            }
+        });
+    </script>
+</body>
+
+</html>

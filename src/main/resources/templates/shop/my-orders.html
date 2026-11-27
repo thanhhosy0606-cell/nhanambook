@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Đơn hàng của tôi')}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="main-content py-4">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav class="small mb-4 text-muted">
+            <a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a> / 
+            <span class="text-dark fw-medium">Đơn hàng của tôi</span>
+        </nav>
+
+        <h3 class="fw-bold text-dark mb-4 d-flex align-items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-primary"></i> Lịch sử & Theo dõi đơn hàng
+        </h3>
+
+        <!-- Empty state -->
+        <div class="text-center py-5 bg-white rounded-4 shadow-sm" th:if="${orderPage.content.isEmpty()}">
+            <div class="d-inline-flex p-4 bg-light rounded-circle text-muted mb-3">
+                <i class="fa-solid fa-box-open fa-3x"></i>
+            </div>
+            <h5 class="fw-bold text-dark">Bạn chưa có đơn hàng nào</h5>
+            <p class="text-muted small mb-4">Các đơn hàng bạn đặt sẽ được lưu trữ và hiển thị chi tiết tại đây.</p>
+            <a th:href="@{/shop/books}" class="btn btn-primary px-4 py-2 rounded-pill fw-semibold">
+                Khám phá sách ngay
+            </a>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white" th:if="${!orderPage.content.isEmpty()}">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Mã đơn</th>
+                            <th>Ngày đặt</th>
+                            <th>Người nhận</th>
+                            <th>Địa chỉ nhận</th>
+                            <th>Tổng thanh toán</th>
+                            <th>Trạng thái đơn</th>
+                            <th class="pe-4 text-end">Chi tiết</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="o : ${orderPage.content}">
+                            <td class="ps-4 fw-bold text-primary">
+                                #<span th:text="${o.maDH}">123</span>
+                            </td>
+                            <td class="text-muted small" th:text="${#temporals.format(o.ngayDat, 'dd/MM/yyyy HH:mm')}">
+                                01/01/2026
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark d-block" th:text="${o.hoTenNguoiNhan}">Họ tên</span>
+                                <small class="text-muted" th:text="${o.sdtNguoiNhan}">0987654321</small>
+                            </td>
+                            <td class="small text-secondary text-truncate" style="max-width: 200px;" th:text="${o.diaChiGiaoHang}">
+                                Địa chỉ giao hàng
+                            </td>
+                            <td class="fw-bold text-danger" th:text="${#numbers.formatDecimal(o.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                320.000 đ
+                            </td>
+                            <td>
+                                <span th:if="${o.trangThai == 'CHO_XAC_NHAN'}" class="badge bg-warning text-dark">Chờ xác nhận</span>
+                                <span th:if="${o.trangThai == 'DA_XAC_NHAN'}" class="badge bg-info text-dark">Đã xác nhận</span>
+                                <span th:if="${o.trangThai == 'DANG_GIAO'}" class="badge bg-primary">Đang giao</span>
+                                <span th:if="${o.trangThai == 'DA_GIAO'}" class="badge bg-success">Đã giao</span>
+                                <span th:if="${o.trangThai == 'DA_HUY'}" class="badge bg-danger">Đã hủy</span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a th:href="@{/shop/order/{id}(id=${o.maDH})}" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                    Xem chi tiết
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Compact Modern Pagination -->
+        <nav class="mt-4 d-flex justify-content-center" th:if="${orderPage.totalPages > 1}"
+             th:with="totalPages=${orderPage.totalPages},
+                      curr=${orderPage.number},
+                      startPage=${T(java.lang.Math).max(0, curr - 2)},
+                      endPage=${T(java.lang.Math).min(totalPages - 1, curr + 2)}">
+            <ul class="pagination pagination-modern mb-0">
+                <li class="page-item" th:classappend="${orderPage.first} ? 'disabled'">
+                    <a class="page-link" th:href="@{/shop/my-orders(page=${curr - 1})}"><i class="fa-solid fa-chevron-left"></i></a>
+                </li>
+                <li class="page-item" th:if="${startPage > 0}">
+                    <a class="page-link" th:href="@{/shop/my-orders(page=0)}">1</a>
+                </li>
+                <li class="page-item disabled" th:if="${startPage > 1}">
+                    <span class="page-link border-0 text-muted px-2">…</span>
+                </li>
+                <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                    th:classappend="${orderPage.number == i} ? 'active'">
+                    <a class="page-link" th:href="@{/shop/my-orders(page=${i})}" th:text="${i + 1}"></a>
+                </li>
+                <li class="page-item disabled" th:if="${endPage < totalPages - 2}">
+                    <span class="page-link border-0 text-muted px-2">…</span>
+                </li>
+                <li class="page-item" th:if="${endPage < totalPages - 1}">
+                    <a class="page-link" th:href="@{/shop/my-orders(page=${totalPages - 1})}" th:text="${totalPages}"></a>
+                </li>
+                <li class="page-item" th:classappend="${orderPage.last} ? 'disabled'">
+                    <a class="page-link" th:href="@{/shop/my-orders(page=${curr + 1})}"><i class="fa-solid fa-chevron-right"></i></a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

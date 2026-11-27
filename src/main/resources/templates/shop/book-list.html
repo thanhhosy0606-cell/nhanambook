@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Danh mục sách')}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="main-content py-4">
+    <div class="container">
+        <!-- Breadcrumb & Header -->
+        <nav class="small mb-3 text-muted">
+            <a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a> / 
+            <span class="text-dark fw-medium">Danh mục sách</span>
+        </nav>
+
+        <div class="row g-4">
+            <!-- Sidebar Multi-Criteria Filter (Phân loại sách, Tác giả, Giá, Quốc gia, Đánh giá) -->
+            <div class="col-lg-3">
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white sticky-top" style="top: 85px; max-height: calc(100vh - 100px); overflow-y: auto;">
+                    <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                        <h6 class="fw-bold mb-0 d-flex align-items-center gap-2 text-dark">
+                            <i class="fa-solid fa-filter text-primary"></i> Bộ lọc tìm kiếm
+                        </h6>
+                        <a th:href="@{/shop/books}" class="text-danger small text-decoration-none fw-semibold"
+                           th:if="${currentLoai != null or selectedTacGia != null or minPrice != null or maxPrice != null or selectedRating != null or (keyword != null and !keyword.isEmpty())}">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Xóa lọc
+                        </a>
+                    </div>
+
+                    <form id="filterForm" th:action="@{/shop/books}" method="get">
+                        <input type="hidden" name="keyword" th:value="${keyword}">
+                        <input type="hidden" name="maLoai" id="filterMaLoaiInput" th:value="${currentLoai}">
+                        <input type="hidden" name="sort" id="sortInput" th:value="${selectedSort}">
+
+                        <!-- 1. THỂ LOẠI SÁCH -->
+                        <div class="filter-group mb-3 pb-3 border-bottom">
+                            <!-- Tiêu đề (Click vào để Thu gọn / Mở rộng toàn bộ) -->
+                            <div class="d-flex justify-content-between align-items-center mb-2 pb-1 cursor-pointer user-select-none" 
+                                 onclick="toggleCategoryFull()" 
+                                 style="cursor: pointer;"
+                                 title="Nhấn để Thu gọn / Mở rộng thể loại sách">
+                                <span class="fw-bold small text-dark d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-layer-group text-primary"></i> Thể loại sách
+                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-muted rounded-pill border px-2 py-1 small fw-medium" 
+                                          th:text="${categories.size()} + ' thể loại'">9 thể loại</span>
+                                    <i class="fa-solid fa-chevron-up text-muted" 
+                                       id="categoryHeaderChevron" 
+                                       style="font-size: 11px; transition: transform 0.3s ease;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Khối toàn bộ danh mục thể loại (Thu gọn là ẩn hết hoàn toàn) -->
+                            <div id="categoryFullContentWrapper" 
+                                 style="overflow: hidden; transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;">
+                                <div class="list-group list-group-flush small" id="categoryListContainer">
+                                    <!-- Tất cả thể loại -->
+                                    <a href="javascript:void(0)" onclick="selectCategory(null)" 
+                                       class="list-group-item list-group-item-action d-flex justify-content-between align-items-center rounded-3 border-0 py-2 px-2.5 mb-1"
+                                       th:classappend="${currentLoai == null} ? 'bg-primary text-white fw-bold shadow-sm' : ''">
+                                        <span><i class="fa-solid fa-border-all me-1 opacity-75"></i> Tất cả thể loại</span>
+                                    </a>
+                                    
+                                    <!-- Toàn bộ danh sách thể loại -->
+                                    <th:block th:each="cat, iterStat : ${categories}">
+                                        <a href="javascript:void(0)" 
+                                           th:data-cat-id="${cat.maLoai}"
+                                           onclick="selectCategory(this.getAttribute('data-cat-id'))" 
+                                           class="list-group-item list-group-item-action d-flex justify-content-between align-items-center rounded-3 border-0 py-2 px-2.5 mb-1 category-item"
+                                           th:classappend="${currentLoai == cat.maLoai} ? 'bg-primary text-white fw-bold shadow-sm active-category' : ''"
+                                           th:attr="data-cat-index=${iterStat.index}">
+                                            <span th:text="${cat.tenLoai}"></span>
+                                            <span class="badge rounded-pill small" 
+                                                  th:classappend="${currentLoai == cat.maLoai} ? 'bg-white text-primary' : 'bg-light text-muted border border-light-subtle'"
+                                                  th:text="${cat.danhSachSach != null ? cat.danhSachSach.size() : ''}"></span>
+                                        </a>
+                                    </th:block>
+                                </div>
+
+                                <!-- Mũi tên Thu gọn ở dưới cùng của danh mục -->
+                                <div class="text-center mt-2 pt-1" id="categoryToggleWrapper">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-light border rounded-pill px-3 py-1.5 text-secondary fw-semibold d-inline-flex align-items-center gap-1 shadow-sm" 
+                                            id="toggleCategoryBtn" 
+                                            onclick="toggleCategoryFull()"
+                                            style="font-size: 11.5px; transition: all 0.25s ease;">
+                                        <span>Thu gọn</span>
+                                        <i class="fa-solid fa-chevron-up ms-1" style="font-size: 10px;"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. KHOẢNG GIÁ SÁCH -->
+                        <div class="filter-group mb-3 pb-3 border-bottom">
+                            <div class="fw-bold small text-dark mb-2 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-tag text-warning"></i> Khoảng giá
+                            </div>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priceRange" id="priceAll" 
+                                           value="" onchange="applyPrice('', '')" 
+                                           th:checked="${minPrice == null and maxPrice == null}">
+                                    <label class="form-check-label text-secondary" for="priceAll">Tất cả mức giá</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priceRange" id="priceU100" 
+                                           value="u100" onchange="applyPrice('', '100000')" 
+                                           th:checked="${maxPrice != null and maxPrice.compareTo(new java.math.BigDecimal('100000')) == 0 and minPrice == null}">
+                                    <label class="form-check-label text-secondary" for="priceU100">Dưới 100.000 đ</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priceRange" id="price100200" 
+                                           value="100-200" onchange="applyPrice('100000', '200000')" 
+                                           th:checked="${minPrice != null and minPrice.compareTo(new java.math.BigDecimal('100000')) == 0 and maxPrice != null and maxPrice.compareTo(new java.math.BigDecimal('200000')) == 0}">
+                                    <label class="form-check-label text-secondary" for="price100200">100.000 đ - 200.000 đ</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priceRange" id="price200300" 
+                                           value="200-300" onchange="applyPrice('200000', '300000')" 
+                                           th:checked="${minPrice != null and minPrice.compareTo(new java.math.BigDecimal('200000')) == 0 and maxPrice != null and maxPrice.compareTo(new java.math.BigDecimal('300000')) == 0}">
+                                    <label class="form-check-label text-secondary" for="price200300">200.000 đ - 300.000 đ</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priceRange" id="priceOver300" 
+                                           value="over300" onchange="applyPrice('300000', '')" 
+                                           th:checked="${minPrice != null and minPrice.compareTo(new java.math.BigDecimal('300000')) == 0 and maxPrice == null}">
+                                    <label class="form-check-label text-secondary" for="priceOver300">Trên 300.000 đ</label>
+                                </div>
+                            </div>
+                            <input type="hidden" name="minPrice" id="minPriceInput" th:value="${minPrice}">
+                            <input type="hidden" name="maxPrice" id="maxPriceInput" th:value="${maxPrice}">
+                        </div>
+
+                        <!-- 3. TÁC GIẢ TIÊU BIỂU (Tìm kiếm & Chọn tác giả) -->
+                        <div class="filter-group mb-3 pb-3 border-bottom">
+                            <div class="fw-bold small text-dark mb-2 d-flex align-items-center justify-content-between">
+                                <span class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid fa-pen-nib text-secondary"></i> Tác giả
+                                </span>
+                                <a href="javascript:void(0)" onclick="selectAuthor('')" 
+                                   class="text-muted small text-decoration-none" 
+                                   style="font-size: 11px;"
+                                   th:if="${selectedTacGia != null and !selectedTacGia.isEmpty()}" 
+                                   title="Bỏ chọn tác giả">
+                                    <i class="fa-solid fa-xmark"></i> Bỏ chọn
+                                </a>
+                            </div>
+                            
+                            <!-- Hidden input để gửi dữ liệu form -->
+                            <input type="hidden" name="tacGia" id="authorHiddenInput" th:value="${selectedTacGia}">
+
+                            <!-- Khối Searchable Dropdown cho Tác giả -->
+                            <div class="dropdown" id="authorDropdownWrapper">
+                                <button type="button" 
+                                        class="form-select form-select-sm text-start d-flex justify-content-between align-items-center bg-white shadow-none" 
+                                        id="authorDropdownTrigger"
+                                        data-bs-toggle="dropdown" 
+                                        data-bs-auto-close="outside"
+                                        aria-expanded="false"
+                                        style="cursor: pointer;">
+                                    <span class="text-truncate me-1" id="authorDropdownLabel" 
+                                          th:text="${(selectedTacGia != null and !selectedTacGia.isEmpty()) ? selectedTacGia : 'Tất cả tác giả'}"
+                                          th:classappend="${selectedTacGia != null and !selectedTacGia.isEmpty()} ? 'fw-bold text-primary' : 'text-secondary'">
+                                        Tất cả tác giả
+                                    </span>
+                                </button>
+
+                                <div class="dropdown-menu p-2 shadow-sm rounded-3 border w-100" 
+                                     id="authorDropdownMenu" 
+                                     style="min-width: 230px; font-size: 13px;">
+                                    <!-- Ô tìm kiếm gõ chữ -->
+                                    <div class="position-relative mb-2">
+                                        <i class="fa-solid fa-magnifying-glass position-absolute text-muted" 
+                                           style="top: 50%; left: 10px; transform: translateY(-50%); font-size: 11px;"></i>
+                                        <input type="text" 
+                                               id="authorSearchBox" 
+                                               class="form-control form-control-sm ps-4 rounded-2" 
+                                               placeholder="Gõ tìm tác giả..." 
+                                               oninput="filterAuthorOptions(this.value)"
+                                               onkeydown="if(event.key==='Enter'){event.preventDefault();}"
+                                               autocomplete="off">
+                                    </div>
+
+                                    <!-- Danh sách các tác giả có thể cuộn -->
+                                    <div class="overflow-y-auto" id="authorOptionsList" style="max-height: 200px;">
+                                        <!-- Mục "Tất cả tác giả" -->
+                                        <a href="javascript:void(0)" 
+                                           class="dropdown-item py-1.5 px-2 rounded-2 author-option-item d-flex align-items-center justify-content-between"
+                                           onclick="selectAuthor('')"
+                                           th:classappend="${selectedTacGia == null or selectedTacGia.isEmpty()} ? 'active bg-primary text-white fw-bold' : ''">
+                                            <span>Tất cả tác giả</span>
+                                            <i class="fa-solid fa-check small" th:if="${selectedTacGia == null or selectedTacGia.isEmpty()}"></i>
+                                        </a>
+
+                                        <!-- Từng tác giả -->
+                                        <th:block th:each="a : ${topAuthors}">
+                                            <a href="javascript:void(0)" 
+                                               class="dropdown-item py-1.5 px-2 rounded-2 author-option-item d-flex align-items-center justify-content-between"
+                                               th:data-author-name="${a}"
+                                               onclick="selectAuthor(this.getAttribute('data-author-name'))"
+                                               th:classappend="${selectedTacGia == a} ? 'active bg-primary text-white fw-bold' : ''">
+                                                <span class="text-truncate" th:text="${a}">Tác giả</span>
+                                                <i class="fa-solid fa-check small" th:if="${selectedTacGia == a}"></i>
+                                            </a>
+                                        </th:block>
+                                    </div>
+
+                                    <!-- Thông báo khi không tìm thấy tác giả -->
+                                    <div id="noAuthorFoundMsg" class="text-center py-3 text-muted small d-none">
+                                        <i class="fa-solid fa-user-xmark mb-1 d-block text-secondary opacity-50" style="font-size: 20px;"></i>
+                                        <span class="fw-medium">Không có tác giả</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 5. ĐÁNH GIÁ (SAO) -->
+                        <div class="filter-group mb-2">
+                            <div class="fw-bold small text-dark mb-2 d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-star text-warning"></i> Đánh giá
+                            </div>
+                            <div class="d-flex flex-column gap-1 small">
+                                <a href="javascript:void(0)" onclick="applyRating('')" 
+                                   class="d-flex align-items-center text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == null} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    Tất cả đánh giá
+                                </a>
+                                <a href="javascript:void(0)" onclick="applyRating(5)" 
+                                   class="d-flex align-items-center justify-content-between text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == 5} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    <span>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                    </span>
+                                    <span class="small" th:classappend="${selectedRating == 5} ? 'fw-bold text-dark' : 'text-muted'">5 sao</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="applyRating(4)" 
+                                   class="d-flex align-items-center justify-content-between text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == 4} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    <span>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                    </span>
+                                    <span class="small" th:classappend="${selectedRating == 4} ? 'fw-bold text-dark' : 'text-muted'">4 sao</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="applyRating(3)" 
+                                   class="d-flex align-items-center justify-content-between text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == 3} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    <span>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                    </span>
+                                    <span class="small" th:classappend="${selectedRating == 3} ? 'fw-bold text-dark' : 'text-muted'">3 sao</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="applyRating(2)" 
+                                   class="d-flex align-items-center justify-content-between text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == 2} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    <span>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                    </span>
+                                    <span class="small" th:classappend="${selectedRating == 2} ? 'fw-bold text-dark' : 'text-muted'">2 sao</span>
+                                </a>
+                                <a href="javascript:void(0)" onclick="applyRating(1)" 
+                                   class="d-flex align-items-center justify-content-between text-decoration-none py-1.5 px-2 rounded-2"
+                                   th:classappend="${selectedRating == 1} ? 'bg-light fw-bold text-dark' : 'text-secondary'">
+                                    <span>
+                                        <i class="fa-solid fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                        <i class="fa-regular fa-star text-warning"></i>
+                                    </span>
+                                    <span class="small" th:classappend="${selectedRating == 1} ? 'fw-bold text-dark' : 'text-muted'">1 sao</span>
+                                </a>
+                            </div>
+                            <input type="hidden" name="rating" id="ratingInput" th:value="${selectedRating}">
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Book Grid (Tìm kiếm sách & Xem chi tiết sách) -->
+            <div class="col-lg-9">
+                <!-- Header Toolbar: Title & Sort -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 bg-white p-3 rounded-4 shadow-sm border border-light gap-3">
+                    <div>
+                        <h4 class="fw-bold mb-0 text-dark" th:if="${selectedCategory != null}" th:text="${selectedCategory.tenLoai}">Tên loại sách</h4>
+                        <h4 class="fw-bold mb-0 text-dark" th:if="${selectedCategory == null and (keyword == null or keyword.isEmpty())}">Tất cả sách</h4>
+                        <h4 class="fw-bold mb-0 text-dark" th:if="${keyword != null and !keyword.isEmpty()}">
+                            Kết quả tìm kiếm: "<span th:text="${keyword}"></span>"
+                        </h4>
+                        <small class="text-muted" th:text="'Tìm thấy ' + ${bookPage.totalElements} + ' cuốn sách'"></small>
+                    </div>
+
+                    <!-- Sort dropdown -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="small text-muted text-nowrap">Sắp xếp:</label>
+                        <select class="form-select form-select-sm" style="width: auto;" onchange="applySort(this.value)">
+                            <option value="" th:selected="${selectedSort == null or selectedSort.isEmpty()}">Mới nhất</option>
+                            <option value="price_asc" th:selected="${selectedSort == 'price_asc'}">Giá: Thấp đến Cao</option>
+                            <option value="price_desc" th:selected="${selectedSort == 'price_desc'}">Giá: Cao đến Thấp</option>
+                            <option value="name_asc" th:selected="${selectedSort == 'name_asc'}">Tên: A - Z</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Active Filter Tags -->
+                <div class="d-flex flex-wrap gap-2 mb-3" 
+                     th:if="${currentLoai != null or selectedTacGia != null or minPrice != null or maxPrice != null or selectedRating != null}">
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small d-flex align-items-center gap-2" th:if="${selectedCategory != null}">
+                        <span>Thể loại: <b th:text="${selectedCategory.tenLoai}"></b></span>
+                        <a href="javascript:void(0)" onclick="selectCategory(null)" class="text-danger text-decoration-none">&times;</a>
+                    </span>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small d-flex align-items-center gap-2" th:if="${selectedTacGia != null and !selectedTacGia.isEmpty()}">
+                        <span>Tác giả: <b th:text="${selectedTacGia}"></b></span>
+                        <a th:href="@{/shop/books(maLoai=${currentLoai}, keyword=${keyword}, minPrice=${minPrice}, maxPrice=${maxPrice})}" class="text-danger text-decoration-none">&times;</a>
+                    </span>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small d-flex align-items-center gap-2" th:if="${minPrice != null or maxPrice != null}">
+                        <span>Giá: <b th:text="${(minPrice != null ? #numbers.formatDecimal(minPrice, 0, 'POINT', 0, 'POINT') + 'đ' : '0đ') + ' - ' + (maxPrice != null ? #numbers.formatDecimal(maxPrice, 0, 'POINT', 0, 'POINT') + 'đ' : 'Vô cực')}"></b></span>
+                        <a href="javascript:void(0)" onclick="applyPrice('', '')" class="text-danger text-decoration-none">&times;</a>
+                    </span>
+                    <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small d-flex align-items-center gap-2" th:if="${selectedRating != null}">
+                        <span>Đánh giá: <b th:text="${selectedRating + ' sao'}"></b> <i class="fa-solid fa-star text-warning"></i></span>
+                        <a href="javascript:void(0)" onclick="applyRating('')" class="text-danger text-decoration-none">&times;</a>
+                    </span>
+                </div>
+
+                <!-- Empty state -->
+                <div class="text-center py-5 bg-white rounded-4 shadow-sm" th:if="${bookPage.content.isEmpty()}">
+                    <i class="fa-solid fa-book-open-reader fa-3x text-muted mb-3"></i>
+                    <h5 class="fw-bold text-dark">Chưa tìm thấy sách phù hợp</h5>
+                    <p class="text-muted small">Hãy thử điều chỉnh lại bộ lọc hoặc duyệt qua các thể loại khác.</p>
+                    <a th:href="@{/shop/books}" class="btn btn-outline-primary btn-sm px-3 rounded-pill">Xem tất cả sách</a>
+                </div>
+
+                <!-- Books List -->
+                <div class="row g-4" th:if="${!bookPage.content.isEmpty()}">
+                    <div class="col-6 col-md-4" th:each="book : ${bookPage.content}">
+                        <div class="book-card h-100 d-flex flex-column">
+                            <div class="position-relative overflow-hidden book-card-img-wrapper">
+                                <a th:href="@{/shop/book/{id}(id=${book.maSach})}" class="d-block text-decoration-none">
+                                    <img th:src="${book.hinhAnh != null ? book.hinhAnh : 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500'}" 
+                                         th:alt="${book.tenSach}" class="book-card-img">
+                                </a>
+                                <a th:href="@{/shop/book/{id}(id=${book.maSach})}" class="book-quick-view-overlay" title="Xem chi tiết sách">
+                                    <i class="fa-regular fa-eye me-1"></i> Xem chi tiết
+                                </a>
+                            </div>
+                            <div class="p-3 d-flex flex-column flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center small text-muted mb-1">
+                                    <span th:text="${book.loaiSach.tenLoai}">Loại sách</span>
+                                </div>
+                                <h6 class="fw-bold mb-1 text-truncate-2">
+                                    <a th:href="@{/shop/book/{id}(id=${book.maSach})}" class="text-dark text-decoration-none" th:text="${book.tenSach}">
+                                        Tên cuốn sách
+                                    </a>
+                                </h6>
+                                <p class="small text-secondary mb-1" th:text="${book.tacGia}">Tác giả</p>
+
+                                <!-- Star Rating (Thực tế từ bảng DANHGIA) -->
+                                <div class="d-flex align-items-center gap-1 text-warning mb-2" style="font-size: 0.775rem;"
+                                     th:if="${book.soLuotDanhGia > 0}"
+                                     th:with="stars=${book.soSaoLamTron}">
+                                    <i th:each="s : ${#numbers.sequence(1, 5)}"
+                                       th:class="${s <= stars} ? 'fa-solid fa-star' : 'fa-regular fa-star'"></i>
+                                    <span class="text-dark fw-bold ms-1" style="font-size: 0.8rem;" th:text="${book.diemDanhGia}">5.0</span>
+                                    <span class="text-muted" style="font-size: 0.725rem;" th:text="'(' + ${book.soLuotDanhGia} + ')'">(1)</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-1 text-muted mb-2" style="font-size: 0.75rem;"
+                                     th:if="${book.soLuotDanhGia == 0}">
+                                    <i class="fa-regular fa-star text-secondary opacity-50"></i>
+                                    <i class="fa-regular fa-star text-secondary opacity-50"></i>
+                                    <i class="fa-regular fa-star text-secondary opacity-50"></i>
+                                    <i class="fa-regular fa-star text-secondary opacity-50"></i>
+                                    <i class="fa-regular fa-star text-secondary opacity-50"></i>
+                                    <span class="small text-muted ms-1" style="font-size: 0.725rem;">Chưa có đánh giá</span>
+                                </div>
+
+                                <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <div class="book-price" th:text="${#numbers.formatDecimal(book.giaBan, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                        150.000 đ
+                                    </div>
+                                    <form th:action="@{/shop/cart/add}" method="post" class="m-0">
+                                        <input type="hidden" name="maSach" th:value="${book.maSach}">
+                                        <button type="submit" class="btn btn-outline-primary btn-sm rounded-circle p-2" title="Thêm vào giỏ">
+                                            <i class="fa-solid fa-cart-plus"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compact Modern Pagination -->
+                <nav class="mt-5 d-flex flex-column align-items-center gap-2" th:if="${bookPage.totalPages > 1}"
+                     th:with="totalPages=${bookPage.totalPages},
+                              curr=${bookPage.number},
+                              startPage=${T(java.lang.Math).max(0, curr - 2)},
+                              endPage=${T(java.lang.Math).min(totalPages - 1, curr + 2)}">
+                    <ul class="pagination pagination-modern mb-1">
+                        <!-- Về đầu trang -->
+                        <li class="page-item" th:classappend="${bookPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/shop/books(page=0, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" title="Trang đầu">
+                                <i class="fa-solid fa-angles-left"></i>
+                            </a>
+                        </li>
+                        <!-- Trang trước -->
+                        <li class="page-item" th:classappend="${bookPage.first} ? 'disabled'">
+                            <a class="page-link" th:href="@{/shop/books(page=${curr - 1}, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" title="Trang trước">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Trang 1 và dấu chấm nếu ở xa -->
+                        <li class="page-item" th:if="${startPage > 0}">
+                            <a class="page-link" th:href="@{/shop/books(page=0, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}">1</a>
+                        </li>
+                        <li class="page-item disabled" th:if="${startPage > 1}">
+                            <span class="page-link border-0 text-muted px-2">…</span>
+                        </li>
+
+                        <!-- Dải trang xung quanh trang hiện tại -->
+                        <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                            th:classappend="${curr == i} ? 'active'">
+                            <a class="page-link" th:href="@{/shop/books(page=${i}, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" th:text="${i + 1}"></a>
+                        </li>
+
+                        <!-- Dấu chấm và Trang cuối nếu ở xa -->
+                        <li class="page-item disabled" th:if="${endPage < totalPages - 2}">
+                            <span class="page-link border-0 text-muted px-2">…</span>
+                        </li>
+                        <li class="page-item" th:if="${endPage < totalPages - 1}">
+                            <a class="page-link" th:href="@{/shop/books(page=${totalPages - 1}, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" th:text="${totalPages}"></a>
+                        </li>
+
+                        <!-- Trang kế tiếp -->
+                        <li class="page-item" th:classappend="${bookPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/shop/books(page=${curr + 1}, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" title="Trang tiếp theo">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </li>
+                        <!-- Tới cuối trang -->
+                        <li class="page-item" th:classappend="${bookPage.last} ? 'disabled'">
+                            <a class="page-link" th:href="@{/shop/books(page=${totalPages - 1}, maLoai=${currentLoai}, keyword=${keyword}, tacGia=${selectedTacGia}, minPrice=${minPrice}, maxPrice=${maxPrice}, rating=${selectedRating}, sort=${selectedSort})}" title="Trang cuối">
+                                <i class="fa-solid fa-angles-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="text-muted small">
+                        Hiển thị trang <span class="fw-bold text-dark" th:text="${curr + 1}">1</span> / <span class="fw-semibold text-dark" th:text="${totalPages}">23</span>
+                        &bull; Tổng cộng <span class="fw-bold text-success" th:text="${bookPage.totalElements}">270</span> cuốn sách
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectCategory(maLoai) {
+    document.getElementById('filterMaLoaiInput').value = maLoai ? maLoai : '';
+    document.getElementById('filterForm').submit();
+}
+
+function applyPrice(min, max) {
+    document.getElementById('minPriceInput').value = min;
+    document.getElementById('maxPriceInput').value = max;
+    document.getElementById('filterForm').submit();
+}
+
+function applyRating(val) {
+    document.getElementById('ratingInput').value = val;
+    document.getElementById('filterForm').submit();
+}
+
+function applySort(val) {
+    document.getElementById('sortInput').value = val;
+    document.getElementById('filterForm').submit();
+}
+
+function selectAuthor(tacGia) {
+    document.getElementById('authorHiddenInput').value = tacGia ? tacGia : '';
+    document.getElementById('filterForm').submit();
+}
+
+function removeVietnameseTones(str) {
+    if (!str) return '';
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
+
+function filterAuthorOptions(val) {
+    const authorOptions = document.querySelectorAll('.author-option-item');
+    const noAuthorMsg = document.getElementById('noAuthorFoundMsg');
+    const rawQuery = (val || '').trim().toLowerCase();
+    const cleanQuery = removeVietnameseTones(rawQuery);
+    let matchedCount = 0;
+
+    authorOptions.forEach(opt => {
+        const name = opt.getAttribute('data-author-name');
+        if (!name) {
+            // Mục "Tất cả tác giả" chỉ hiện khi chưa gõ chữ
+            if (rawQuery === '') {
+                opt.classList.remove('d-none');
+                matchedCount++;
+            } else {
+                opt.classList.add('d-none');
+            }
+            return;
+        }
+
+        const rawName = name.toLowerCase();
+        const cleanName = removeVietnameseTones(rawName);
+
+        if (rawName.includes(rawQuery) || cleanName.includes(cleanQuery)) {
+            opt.classList.remove('d-none');
+            matchedCount++;
+        } else {
+            opt.classList.add('d-none');
+        }
+    });
+
+    // Nếu không có tác giả nào khớp -> hiện thông báo "Không có tác giả"
+    if (matchedCount === 0) {
+        if (noAuthorMsg) noAuthorMsg.classList.remove('d-none');
+    } else {
+        if (noAuthorMsg) noAuthorMsg.classList.add('d-none');
+    }
+}
+
+function initAuthorSearch() {
+    const authorSearchBox = document.getElementById('authorSearchBox');
+    const authorDropdown = document.getElementById('authorDropdownWrapper');
+
+    if (authorDropdown && authorSearchBox) {
+        // Tự động focus ô tìm kiếm khi mở dropdown
+        authorDropdown.addEventListener('shown.bs.dropdown', function () {
+            authorSearchBox.focus();
+            authorSearchBox.value = '';
+            filterAuthorOptions('');
+        });
+    }
+}
+
+let isCategoryFullOpen = true;
+
+function toggleCategoryFull() {
+    const wrapper = document.getElementById('categoryFullContentWrapper');
+    const chevron = document.getElementById('categoryHeaderChevron');
+    
+    if (!wrapper) return;
+
+    isCategoryFullOpen = !isCategoryFullOpen;
+
+    if (isCategoryFullOpen) {
+        // Mở rộng: Chảy xuống mượt mà hiển thị tất cả
+        wrapper.style.maxHeight = wrapper.scrollHeight + 30 + 'px';
+        wrapper.style.opacity = '1';
+        if (chevron) {
+            chevron.style.transform = 'rotate(0deg)';
+        }
+    } else {
+        // Thu gọn là ẩn hết hoàn toàn danh mục
+        wrapper.style.maxHeight = '0px';
+        wrapper.style.opacity = '0';
+        if (chevron) {
+            chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    sessionStorage.setItem('cat_full_open', isCategoryFullOpen ? 'true' : 'false');
+}
+
+function initCategoryFullState() {
+    const wrapper = document.getElementById('categoryFullContentWrapper');
+    const chevron = document.getElementById('categoryHeaderChevron');
+    if (!wrapper) return;
+
+    // Nếu đang chọn một thể loại cụ thể -> luôn mở rộng để thấy thể loại đang chọn
+    const hasActiveCategory = wrapper.querySelector('.active-category') !== null;
+    const savedState = sessionStorage.getItem('cat_full_open');
+    
+    let shouldOpen;
+    if (hasActiveCategory) {
+        shouldOpen = true;
+    } else if (savedState !== null) {
+        shouldOpen = (savedState === 'true');
+    } else {
+        shouldOpen = true; // Mặc định mở ban đầu
+    }
+
+    isCategoryFullOpen = shouldOpen;
+
+    if (shouldOpen) {
+        wrapper.style.maxHeight = wrapper.scrollHeight + 30 + 'px';
+        wrapper.style.opacity = '1';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+        wrapper.style.maxHeight = '0px';
+        wrapper.style.opacity = '0';
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        initCategoryFullState();
+        initAuthorSearch();
+    });
+} else {
+    initCategoryFullState();
+    initAuthorSearch();
+}
+</script>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>

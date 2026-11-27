@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Đặt hàng & Thanh toán')}"></head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="main-content py-4">
+    <div class="container">
+        <!-- Breadcrumb -->
+        <nav class="small mb-4 text-muted">
+            <a th:href="@{/}" class="text-decoration-none text-muted">Trang chủ</a> / 
+            <a th:href="@{/shop/cart}" class="text-decoration-none text-muted">Giỏ hàng</a> / 
+            <span class="text-dark fw-medium">Đặt hàng</span>
+        </nav>
+
+        <h3 class="fw-bold text-dark mb-4">Thông tin đặt hàng & Thanh toán</h3>
+
+        <form th:action="@{/shop/checkout}" method="post" th:object="${checkoutRequest}">
+            <div class="row g-4">
+                <!-- Left: Shipping & Payment Options -->
+                <div class="col-lg-7">
+                    <!-- 1. Shipping Address (DIACHI) -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-location-dot text-primary"></i> 1. Địa chỉ nhận hàng
+                        </h5>
+
+                        <!-- Chọn nhanh từ Sổ địa chỉ đã lưu -->
+                        <div class="mb-3 p-3 bg-light rounded-3 border" th:if="${savedAddresses != null and !savedAddresses.isEmpty()}">
+                            <label class="form-label small fw-semibold text-dark mb-1">
+                                <i class="fa-solid fa-address-book text-success me-1"></i> Chọn nhanh từ sổ địa chỉ đã lưu:
+                            </label>
+                            <select class="form-select form-select-sm" id="savedAddressSelect">
+                                <option th:each="addr : ${savedAddresses}"
+                                        th:value="${addr.maDiaChi}"
+                                        th:data-name="${addr.hoTenNguoiNhan}"
+                                        th:data-phone="${addr.sdtNguoiNhan}"
+                                        th:data-address="${addr.diaChiNhan}"
+                                        th:selected="${addr.macDinh}"
+                                        th:text="${(addr.macDinh ? '[Mặc định] ' : '') + addr.hoTenNguoiNhan + ' - ' + addr.sdtNguoiNhan + ' | ' + addr.diaChiNhan}">
+                                    Địa chỉ đã lưu
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold text-secondary">Họ tên người nhận <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{hoTenNguoiNhan}" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('hoTenNguoiNhan')}" th:errors="*{hoTenNguoiNhan}"></div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label small fw-semibold text-secondary">Số điện thoại <span class="text-danger">*</span></label>
+                                <input type="tel" class="form-control" th:field="*{sdtNguoiNhan}" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('sdtNguoiNhan')}" th:errors="*{sdtNguoiNhan}"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Địa chỉ cụ thể (Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/TP) <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" th:field="*{diaChiNhan}" id="diaChiNhanInput" placeholder="Ví dụ: 123 Đường Lê Lợi, P. Bến Nghé, Quận 1, TP. HCM" required>
+                                <div class="text-danger small mt-1" th:if="${#fields.hasErrors('diaChiNhan')}" th:errors="*{diaChiNhan}"></div>
+                                <div class="d-flex flex-wrap gap-2 mt-2 small text-muted align-items-center">
+                                    <span><i class="fa-solid fa-truck-fast text-success me-1"></i>Biểu phí ship:</span>
+                                    <span class="badge bg-light text-dark border">Hà Nội / TP.HCM: 15.000đ</span>
+                                    <span class="badge bg-light text-dark border">Liên vùng: 25.000đ</span>
+                                    <span class="badge bg-light text-dark border">Tuyến xa: 35.000đ</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Miễn phí đơn từ 300.000đ</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Ghi chú cho shipper (tùy chọn):</label>
+                                <textarea class="form-control" rows="2" th:field="*{ghiChu}" placeholder="Ghi chú giao giờ hành chính, gọi trước khi giao..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Payment Method (PTTHTHANHTOAN & Cổng thanh toán) -->
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white mb-4">
+                        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+                            <i class="fa-solid fa-wallet text-primary"></i> 2. Phương thức thanh toán
+                        </h5>
+                        <p class="text-muted small mb-3">Chọn một trong các phương thức thanh toán được hỗ trợ:</p>
+
+                        <div class="d-flex flex-column gap-3">
+                            <div class="form-check p-3 border rounded-3 d-flex align-items-center gap-3 payment-method-item" 
+                                 th:each="pt : ${paymentMethods}"
+                                 th:classappend="${checkoutRequest.maPTTT == pt.maPTTT ? 'border-success bg-success bg-opacity-10' : ''}"
+                                 style="cursor: pointer;">
+                                <input class="form-check-input ms-0 mt-0" type="radio" 
+                                       name="maPTTT"
+                                       th:id="'pttt_' + ${pt.maPTTT}" 
+                                       th:value="${pt.maPTTT}" 
+                                       th:checked="${checkoutRequest.maPTTT == pt.maPTTT}" 
+                                       required>
+                                <label class="form-check-label w-100 cursor-pointer mb-0" th:for="'pttt_' + ${pt.maPTTT}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="fw-bold text-dark" th:text="${pt.tenPTTT}">Tên phương thức</span>
+                                            <small class="text-muted d-block" th:text="${pt.moTa}">Mô tả</small>
+                                        </div>
+                                        <div>
+                                            <span th:if="${pt.tenPTTT == 'Tiền mặt' or pt.tenPTTT == 'Tien mat'}" class="badge bg-secondary">COD</span>
+                                            <span th:if="${pt.tenPTTT == 'MoMo'}" class="badge text-white" style="background-color: #d82d8b;"><i class="fa-solid fa-wallet me-1"></i> Cổng MoMo</span>
+                                            <span th:if="${pt.tenPTTT == 'VietQR'}" class="badge bg-success"><i class="fa-solid fa-qrcode me-1"></i> VietQR (PayOS)</span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Order Summary & Coupon (MAGIAMGIA) -->
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white sticky-top" style="top: 85px;">
+                        <h5 class="fw-bold text-dark mb-3">Đơn hàng của bạn</h5>
+
+                        <!-- Items list -->
+                        <div class="d-flex flex-column gap-2 mb-3 max-h-300 overflow-auto">
+                            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" th:each="it : ${items}">
+                                <input type="hidden" name="selectedItems" th:value="${it.sach.maSach}">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-light text-dark border" th:text="${it.soLuong} + 'x'">1x</span>
+                                    <span class="text-dark small fw-medium text-truncate" style="max-width: 200px;" th:text="${it.sach.tenSach}">Tên sách</span>
+                                </div>
+                                <span class="text-dark small fw-semibold" 
+                                      th:text="${#numbers.formatDecimal(it.donGia * it.soLuong, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                    150.000 đ
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <a th:href="@{/shop/cart}" class="small text-primary text-decoration-none fw-semibold">
+                                <i class="fa-solid fa-pen-to-square me-1"></i> Thay đổi sản phẩm
+                            </a>
+                        </div>
+
+                        <!-- Coupon picker: chỉ hiển thị mã đã lưu (MAGIAMGIA) -->
+                        <div th:replace="~{fragments/coupon-picker :: picker(${savedCoupons}, ${checkoutRequest.maGiamGiaCode}, 'maGiamGiaCode')}"></div>
+
+                        <hr class="my-3">
+
+                        <!-- Pricing breakdown -->
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Tạm tính:</span>
+                            <span class="fw-semibold text-dark small" id="checkoutSubtotal" th:data-value="${subtotal}"
+                                  th:text="${#numbers.formatDecimal(subtotal, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                300.000 đ
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-success" id="checkoutDiscountRow" style="display: none !important;">
+                            <span class="small">Giảm giá (<span id="checkoutDiscountCode"></span>):</span>
+                            <span class="fw-semibold small" id="checkoutDiscount">-0 đ</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="text-muted small d-block">Phí vận chuyển:</span>
+                                <small class="text-success fw-medium" id="checkoutShippingNote" style="font-size: 0.75rem;"></small>
+                            </div>
+                            <span class="fw-semibold text-dark small" id="checkoutShipping">25.000 đ</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top mb-4">
+                            <span class="fw-bold text-dark">Tổng thanh toán dự kiến:</span>
+                            <span class="h4 fw-bold text-danger mb-0" id="checkoutTotal"
+                                  th:text="${#numbers.formatDecimal(subtotal + 25000, 0, 'POINT', 0, 'POINT') + ' đ'}">
+                                325.000 đ
+                            </span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill fw-semibold shadow">
+                            <i class="fa-solid fa-lock me-2"></i> Xác nhận đặt hàng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/coupon-picker.js}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const picker = document.getElementById('couponPicker');
+    const addressInput = document.getElementById('diaChiNhanInput') || document.getElementById('diaChiNhan');
+    const subtotal = parseFloat(document.getElementById('checkoutSubtotal').dataset.value || '0');
+    const fmt = CouponPicker.formatVnd;
+
+    function update() {
+        const addrVal = addressInput ? addressInput.value : '';
+        const c = CouponPicker.refresh(picker, subtotal, addrVal);
+        const row = document.getElementById('checkoutDiscountRow');
+        if (c.code && c.discount > 0) {
+            row.style.setProperty('display', 'flex', 'important');
+            document.getElementById('checkoutDiscountCode').textContent = c.code;
+            document.getElementById('checkoutDiscount').textContent = '-' + fmt(c.discount);
+        } else {
+            row.style.setProperty('display', 'none', 'important');
+        }
+        document.getElementById('checkoutShipping').textContent = c.shipping === 0 ? 'Miễn phí (0 đ)' : fmt(c.shipping);
+        const shipNote = document.getElementById('checkoutShippingNote');
+        if (shipNote) {
+            shipNote.textContent = c.regionLabel || '';
+        }
+        document.getElementById('checkoutTotal').textContent = fmt(Math.max(subtotal - c.discount + c.shipping, 0));
+    }
+
+    if (picker) picker.addEventListener('change', update);
+    if (addressInput) addressInput.addEventListener('input', update);
+
+    const savedAddressSelect = document.getElementById('savedAddressSelect');
+    if (savedAddressSelect) {
+        savedAddressSelect.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            if (!opt) return;
+            const nameInput = document.getElementById('hoTenNguoiNhan');
+            const phoneInput = document.getElementById('sdtNguoiNhan');
+            if (nameInput && opt.dataset.name) nameInput.value = opt.dataset.name;
+            if (phoneInput && opt.dataset.phone) phoneInput.value = opt.dataset.phone;
+            if (addressInput && opt.dataset.address) {
+                addressInput.value = opt.dataset.address;
+                addressInput.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
+    update();
+
+    // Toggle active styles on payment method click
+    document.querySelectorAll('.payment-method-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            if (radio) {
+                radio.checked = true;
+                document.querySelectorAll('.payment-method-item').forEach(el => {
+                    el.classList.remove('border-success', 'bg-success', 'bg-opacity-10');
+                });
+                this.classList.add('border-success', 'bg-success', 'bg-opacity-10');
+            }
+        });
+    });
+});
+</script>
+
+<div th:replace="~{fragments/footer :: footer}"></div>
+</body>
+</html>
