@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:fragment="sidebar(activeNav)">
+<div id="sidebar">
+    <div class="brand">
+        <i class="fa-solid fa-book-open" style="color: #fbbf24; font-size: 1.25rem;"></i>
+        <span class="fw-bold text-white">Nhã Nam Admin</span>
+    </div>
+
+    <div class="py-3">
+        <a th:href="@{/admin}" class="nav-link" th:classappend="${activeNav == 'dashboard'} ? 'active' : ''">
+            <i class="fa-solid fa-gauge-high" style="color: #38bdf8;"></i>
+            <span>Tổng quan</span>
+        </a>
+
+        <!-- Use Case: Thống kê doanh thu & Báo cáo PDF -->
+        <a th:href="@{/admin/revenue}" class="nav-link" th:classappend="${activeNav == 'revenue'} ? 'active' : ''">
+            <i class="fa-solid fa-chart-line" style="color: #f59e0b;"></i>
+            <span>Thống kê doanh thu</span>
+        </a>
+
+        <!-- Use Case: Quản lý sách -->
+        <a th:href="@{/admin/books}" class="nav-link" th:classappend="${activeNav == 'books'} ? 'active' : ''">
+            <i class="fa-solid fa-book" style="color: #fbbf24;"></i>
+            <span>Quản lý sách</span>
+        </a>
+
+        <!-- Use Case: Quản lý loại sách -->
+        <a th:href="@{/admin/categories}" class="nav-link" th:classappend="${activeNav == 'categories'} ? 'active' : ''">
+            <i class="fa-solid fa-layer-group" style="color: #c084fc;"></i>
+            <span>Quản lý loại sách</span>
+        </a>
+
+        <!-- Use Case: Quản lý đơn hàng -->
+        <a th:href="@{/admin/orders}" class="nav-link" th:classappend="${activeNav == 'orders'} ? 'active' : ''">
+            <i class="fa-solid fa-cart-flatbed" style="color: #fb923c;"></i>
+            <span>Quản lý đơn hàng</span>
+        </a>
+
+        <!-- Use Case: Quản lý khách hàng -->
+        <a th:href="@{/admin/customers}" class="nav-link" th:classappend="${activeNav == 'customers'} ? 'active' : ''">
+            <i class="fa-solid fa-users" style="color: #60a5fa;"></i>
+            <span>Quản lý khách hàng</span>
+        </a>
+
+        <!-- Use Case: Quản lý mã giảm giá -->
+        <a th:href="@{/admin/coupons}" class="nav-link" th:classappend="${activeNav == 'coupons'} ? 'active' : ''">
+            <i class="fa-solid fa-tags" style="color: #f472b6;"></i>
+            <span>Quản lý mã giảm giá</span>
+        </a>
+
+        <hr class="border-secondary mx-3 my-3" style="opacity: 0.15;">
+
+        <a th:href="@{/}" class="nav-link">
+            <i class="fa-solid fa-store" style="color: #ffffff;"></i>
+            <span>Về trang bán hàng</span>
+        </a>
+
+        <a th:href="@{/logout}" class="nav-link">
+            <i class="fa-solid fa-arrow-right-from-bracket" style="color: #f87171;"></i>
+            <span>Đăng xuất</span>
+        </a>
+    </div>
+</div>
+
+<!-- Floating Toast Notifications (Góc trên bên phải màn hình, biến mất sau 3.5s) -->
+<div class="app-toast-container" id="adminToastContainer">
+    <!-- Success Toast -->
+    <div th:if="${successMessage}" class="app-toast toast-success" role="alert" data-auto-dismiss="3500">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div class="app-toast-message" th:text="${successMessage}">Thao tác thành công!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 3.5s;"></div>
+    </div>
+
+    <!-- Error Toast -->
+    <div th:if="${errorMessage}" class="app-toast toast-error" role="alert" data-auto-dismiss="4500">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="app-toast-message" th:text="${errorMessage}">Đã xảy ra lỗi!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 4.5s;"></div>
+    </div>
+
+    <!-- Warning Toast -->
+    <div th:if="${warningMessage}" class="app-toast toast-warning" role="alert" data-auto-dismiss="6000">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <div class="app-toast-message" th:text="${warningMessage}">Cảnh báo!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 6s;"></div>
+    </div>
+</div>
+
+<script>
+function dismissToast(toastEl) {
+    if (!toastEl || toastEl.classList.contains('toast-hiding')) return;
+    toastEl.classList.add('toast-hiding');
+    setTimeout(function () {
+        if (toastEl.parentNode) toastEl.remove();
+    }, 380);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.app-toast[data-auto-dismiss]').forEach(function (toast) {
+        var ms = parseInt(toast.getAttribute('data-auto-dismiss') || '3500', 10);
+        setTimeout(function () {
+            dismissToast(toast);
+        }, ms);
+    });
+});
+
+window.showAdminToast = function (type, message, duration) {
+    duration = duration || 3500;
+    var container = document.getElementById('adminToastContainer');
+    if (!container) return;
+    var toast = document.createElement('div');
+    toast.className = 'app-toast toast-' + type;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('data-auto-dismiss', duration);
+    
+    var iconClass = 'fa-check';
+    if (type === 'error') iconClass = 'fa-triangle-exclamation';
+    else if (type === 'warning') iconClass = 'fa-circle-exclamation';
+    else if (type === 'info') iconClass = 'fa-circle-info';
+
+    toast.innerHTML = 
+        '<div class="app-toast-content">' +
+            '<div class="app-toast-icon"><i class="fa-solid ' + iconClass + '"></i></div>' +
+            '<div class="app-toast-message">' + message + '</div>' +
+            '<button type="button" class="app-toast-close" onclick="dismissToast(this.closest(\'.app-toast\'))" aria-label="Đóng">' +
+                '<i class="fa-solid fa-xmark"></i>' +
+            '</button>' +
+        '</div>' +
+        '<div class="app-toast-progress" style="animation-duration: ' + (duration / 1000) + 's;"></div>';
+    
+    container.appendChild(toast);
+    setTimeout(function () {
+        dismissToast(toast);
+    }, duration);
+};
+</script>
+</body>
+</html>

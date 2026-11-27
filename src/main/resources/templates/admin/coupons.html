@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Mã Giảm Giá - BookMind Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/admin.css}" rel="stylesheet">
+</head>
+<body>
+<div id="wrapper">
+    <div th:replace="~{admin/sidebar :: sidebar('coupons')}"></div>
+
+    <div id="content">
+        <div class="admin-header">
+            <h5 class="fw-bold mb-0 text-dark">Quản lý Mã Giảm Giá</h5>
+            <button class="btn btn-primary rounded-pill btn-sm px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addCouponModal">
+                <i class="fa-solid fa-plus me-1"></i> Tạo mã giảm giá
+            </button>
+        </div>
+
+        <div class="p-4">
+            <!-- Search & Filter Card -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+                <form th:action="@{/admin/coupons}" method="get" class="row g-2 align-items-center">
+                    <!-- Search Input -->
+                    <div class="col-md-6 col-lg-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0 text-muted rounded-start-pill ps-3">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 ps-1 rounded-end-pill" 
+                                   name="keyword" id="couponSearchInput"
+                                   th:value="${keyword}" 
+                                   placeholder="Tìm theo mã code, tên chương trình...">
+                        </div>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="col-sm-6 col-md-3 col-lg-3">
+                        <select class="form-select form-select-sm rounded-pill" name="status" onchange="this.form.submit()">
+                            <option value="ALL" th:selected="${selectedStatus == null or selectedStatus == 'ALL'}">-- Tất cả trạng thái --</option>
+                            <option value="HOAT_DONG" th:selected="${selectedStatus == 'HOAT_DONG'}">Hoạt động</option>
+                            <option value="NGUNG" th:selected="${selectedStatus == 'NGUNG'}">Ngừng</option>
+                        </select>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="col-md-3 col-lg-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="fa-solid fa-filter me-1"></i> Lọc
+                        </button>
+                        <a th:if="${(keyword != null and !keyword.isEmpty()) or (selectedStatus != null and selectedStatus != 'ALL')}" 
+                           th:href="@{/admin/coupons}" 
+                           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Bỏ lọc
+                        </a>
+                        <span class="ms-auto text-muted small align-self-center d-none d-lg-inline">
+                            Tổng: <strong class="text-primary" id="totalCouponCount" th:text="${coupons.size()}">0</strong> mã
+                        </span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Coupons Table -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-custom">
+                        <thead>
+                            <tr class="text-nowrap">
+                                <th class="text-nowrap">Mã Code</th>
+                                <th class="text-nowrap">Tên chương trình</th>
+                                <th class="text-nowrap">Mức giảm</th>
+                                <th class="text-nowrap">Đơn tối thiểu</th>
+                                <th class="text-nowrap">Số lượng</th>
+                                <th class="text-nowrap">Hạn sử dụng</th>
+                                <th class="text-nowrap">Trạng thái</th>
+                                <th class="text-center text-nowrap" style="min-width: 140px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${coupons.isEmpty()}">
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-ticket fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                    Không tìm thấy mã giảm giá nào
+                                </td>
+                            </tr>
+                            <tr th:each="c : ${coupons}"
+                                class="coupon-row"
+                                th:data-id="${c.maMaGiamGia}"
+                                th:data-code="${c.maCode}"
+                                th:data-name="${c.tenMa}"
+                                th:data-percent="${c.phanTramGiam}"
+                                th:data-max="${c.soTienGiamToiDa}"
+                                th:data-min="${c.giaTriDonToiThieu}"
+                                th:data-quantity="${c.soLuong}"
+                                th:data-start="${c.ngayBatDau}"
+                                th:data-end="${c.ngayKetThuc}"
+                                th:data-status="${c.trangThai}">
+                                <td>
+                                    <span class="badge bg-light text-primary border font-monospace fs-6 px-2 py-1" th:text="${c.maCode}">CODE</span>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark d-block" th:text="${c.tenMa}">Tên mã</span>
+                                </td>
+                                <td>
+                                    <div th:if="${c.phanTramGiam != null and c.phanTramGiam > 0}">
+                                        <span class="fw-bold text-success" th:text="${c.phanTramGiam} + '%'">10%</span>
+                                        <small class="text-muted d-block" th:if="${c.soTienGiamToiDa != null and c.soTienGiamToiDa > 0}"
+                                               th:text="'Tối đa ' + ${#numbers.formatDecimal(c.soTienGiamToiDa, 0, 'POINT', 0, 'POINT') + 'đ'}"></small>
+                                    </div>
+                                    <div th:if="${(c.phanTramGiam == null or c.phanTramGiam == 0) and c.soTienGiamToiDa != null}">
+                                        <span class="fw-bold text-success" 
+                                              th:text="${#numbers.formatDecimal(c.soTienGiamToiDa, 0, 'POINT', 0, 'POINT') + ' đ'}">30.000 đ</span>
+                                    </div>
+                                </td>
+                                <td class="text-secondary small" th:text="${#numbers.formatDecimal(c.giaTriDonToiThieu, 0, 'POINT', 0, 'POINT') + ' đ'}">200.000 đ</td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${c.soLuong} + ' lượt'">100</span>
+                                </td>
+                                <td class="small text-muted">
+                                    <span th:text="${#temporals.format(c.ngayBatDau, 'dd/MM/yyyy')}">01/01</span> - 
+                                    <span th:text="${#temporals.format(c.ngayKetThuc, 'dd/MM/yyyy')}">31/12</span>
+                                </td>
+                                <td>
+                                    <span th:if="${c.trangThai == 'HOAT_DONG'}" class="badge bg-success">Hoạt động</span>
+                                    <span th:if="${c.trangThai == 'NGUNG'}" class="badge bg-secondary">Ngừng</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex gap-1 align-items-center">
+                                        <!-- Edit button -->
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 btn-edit-coupon" 
+                                                title="Chỉnh sửa mã">
+                                            <i class="fa-solid fa-pen-to-square"></i> Sửa
+                                        </button>
+
+                                        <!-- Toggle Status button -->
+                                        <form th:action="@{/admin/coupons/{id}/toggle(id=${c.maMaGiamGia})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary rounded-pill px-2" 
+                                                    th:title="${c.trangThai == 'HOAT_DONG' ? 'Ngừng hoạt động' : 'Kích hoạt lại'}">
+                                                <i class="fa-solid fa-power-off"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- Delete button -->
+                                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 btn-delete-coupon" 
+                                                th:data-id="${c.maMaGiamGia}"
+                                                th:data-code="${c.maCode}"
+                                                th:data-name="${c.tenMa}"
+                                                title="Xóa mã giảm giá">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL TẠO MÃ GIẢM GIÁ (ADD COUPON) -->
+<!-- ========================================================== -->
+<div class="modal fade" id="addCouponModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form th:action="@{/admin/coupons/save}" method="post" th:object="${couponForm}" id="addCouponForm">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fa-solid fa-ticket text-primary me-2"></i>Tạo mã giảm giá mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Code & Quantity -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Mã code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-uppercase rounded-3 font-monospace" 
+                                   th:field="*{maCode}" placeholder="VOUCHER10" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Số lượng phát hành <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" th:field="*{soLuong}" min="1" value="100" required>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Tên chương trình ưu đãi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" th:field="*{tenMa}" placeholder="Ví dụ: Giảm giá mùa tựu trường, Mừng ngày quốc tế thiếu nhi..." required>
+                        </div>
+
+                        <!-- Discount details -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Phần trăm giảm (%)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" th:field="*{phanTramGiam}" min="0" max="100" step="any" placeholder="10">
+                                <span class="input-group-text rounded-end-3">%</span>
+                            </div>
+                            <small class="text-muted">Để trống hoặc 0 nếu muốn giảm số tiền cố định</small>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Giảm tối đa / Số tiền giảm (VNĐ)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" th:field="*{soTienGiamToiDa}" min="0" step="any" placeholder="50000">
+                                <span class="input-group-text rounded-end-3">đ</span>
+                            </div>
+                            <small class="text-muted">Nếu có %, đây là mức trần giảm tối đa</small>
+                        </div>
+
+                        <!-- Minimum Order -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Đơn hàng tối thiểu (VNĐ)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" th:field="*{giaTriDonToiThieu}" min="0" step="any" placeholder="100000">
+                                <span class="input-group-text rounded-end-3">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Trạng thái</label>
+                            <select class="form-select rounded-3" th:field="*{trangThai}">
+                                <option value="HOAT_DONG">Hoạt động</option>
+                                <option value="NGUNG">Ngừng hoạt động</option>
+                            </select>
+                        </div>
+
+                        <!-- Time range -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control rounded-3" th:field="*{ngayBatDau}" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Ngày kết thúc <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control rounded-3" th:field="*{ngayKetThuc}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-check me-1"></i> Lưu mã
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL CHỈNH SỬA MÃ GIẢM GIÁ (EDIT COUPON) -->
+<!-- ========================================================== -->
+<div class="modal fade" id="editCouponModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form th:action="@{/admin/coupons/save}" method="post" id="editCouponForm">
+                <input type="hidden" name="maMaGiamGia" id="editMaMaGiamGia">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fa-solid fa-pen-to-square text-primary me-2"></i>Chỉnh sửa mã giảm giá
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <!-- Code & Quantity -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Mã code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control text-uppercase rounded-3 font-monospace" 
+                                   name="maCode" id="editMaCode" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Số lượng phát hành <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" name="soLuong" id="editSoLuong" min="0" required>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Tên chương trình ưu đãi <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" name="tenMa" id="editTenMa" required>
+                        </div>
+
+                        <!-- Discount details -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Phần trăm giảm (%)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" name="phanTramGiam" id="editPhanTramGiam" min="0" max="100" step="any">
+                                <span class="input-group-text rounded-end-3">%</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Giảm tối đa / Số tiền giảm (VNĐ)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" name="soTienGiamToiDa" id="editSoTienGiamToiDa" min="0" step="any">
+                                <span class="input-group-text rounded-end-3">đ</span>
+                            </div>
+                        </div>
+
+                        <!-- Minimum Order -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Đơn hàng tối thiểu (VNĐ)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control rounded-start-3" name="giaTriDonToiThieu" id="editGiaTriDonToiThieu" min="0" step="any">
+                                <span class="input-group-text rounded-end-3">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Trạng thái</label>
+                            <select class="form-select rounded-3" name="trangThai" id="editTrangThai">
+                                <option value="HOAT_DONG">Hoạt động</option>
+                                <option value="NGUNG">Ngừng hoạt động</option>
+                            </select>
+                        </div>
+
+                        <!-- Time range -->
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Ngày bắt đầu <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control rounded-3" name="ngayBatDau" id="editNgayBatDau" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label small fw-semibold">Ngày kết thúc <span class="text-danger">*</span></label>
+                            <input type="datetime-local" class="form-control rounded-3" name="ngayKetThuc" id="editNgayKetThuc" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-check me-1"></i> Cập nhật mã
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================== -->
+<!-- MODAL XÁC NHẬN XÓA MÃ GIẢM GIÁ (DELETE MODAL) -->
+<!-- ========================================================== -->
+<div class="modal fade" id="deleteCouponModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form id="deleteCouponForm" method="post">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Xác nhận xóa mã giảm giá
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <span class="badge bg-danger-subtle text-danger p-3 rounded-circle">
+                            <i class="fa-solid fa-trash-can fa-2x"></i>
+                        </span>
+                    </div>
+                    <p class="mb-2">Bạn có chắc chắn muốn xóa mã giảm giá này không?</p>
+                    <div class="p-3 bg-light rounded-3 mb-3">
+                        <span class="badge bg-primary fs-6 font-monospace" id="deleteCouponCodeDisplay">CODE</span>
+                        <div class="fw-bold text-dark mt-2" id="deleteCouponNameDisplay">Tên chương trình</div>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        <i class="fa-solid fa-shield-halved text-success me-1"></i>
+                        Lưu ý: Nếu mã đã được sử dụng trong các đơn hàng trước đó, hệ thống sẽ tự động chuyển sang trạng thái <strong>Ngừng</strong> để đảm bảo tính toàn vẹn của lịch sử hóa đơn.
+                    </p>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 justify-content-center">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-trash me-1"></i> Xóa mã này
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. TÌM KIẾM TỨC THÌ (REAL-TIME LIVE SEARCH)
+    const searchInput = document.getElementById('couponSearchInput');
+    const tableRows = document.querySelectorAll('.coupon-row');
+    const totalBadge = document.getElementById('totalCouponCount');
+
+    function stripVN(str) {
+        if (!str) return '';
+        return str.toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'd').toLowerCase().trim();
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            const cleanQuery = stripVN(query);
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const code = (row.getAttribute('data-code') || '').toLowerCase();
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const cleanCombined = stripVN(`${code} ${name}`);
+
+                if (!query || code.includes(query) || name.includes(query) || cleanCombined.includes(cleanQuery)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (totalBadge && query) {
+                totalBadge.textContent = visibleCount;
+            }
+        });
+    }
+
+    // 2. SỰ KIỆN NÚT SỬA (OPEN EDIT MODAL)
+    const editModal = new bootstrap.Modal(document.getElementById('editCouponModal'));
+
+    function formatForDatetimeLocal(dtString) {
+        if (!dtString) return '';
+        return dtString.substring(0, 16);
+    }
+
+    document.querySelectorAll('.btn-edit-coupon').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const row = this.closest('.coupon-row');
+            const id = row.getAttribute('data-id');
+            const code = row.getAttribute('data-code') || '';
+            const name = row.getAttribute('data-name') || '';
+            const percent = row.getAttribute('data-percent') || '';
+            const max = row.getAttribute('data-max') || '';
+            const min = row.getAttribute('data-min') || '0';
+            const quantity = row.getAttribute('data-quantity') || '0';
+            const start = row.getAttribute('data-start') || '';
+            const end = row.getAttribute('data-end') || '';
+            const status = row.getAttribute('data-status') || 'HOAT_DONG';
+
+            document.getElementById('editMaMaGiamGia').value = id;
+            document.getElementById('editMaCode').value = code;
+            document.getElementById('editTenMa').value = name;
+            document.getElementById('editSoLuong').value = quantity;
+            document.getElementById('editPhanTramGiam').value = percent;
+            document.getElementById('editSoTienGiamToiDa').value = max;
+            document.getElementById('editGiaTriDonToiThieu').value = min;
+            document.getElementById('editTrangThai').value = status;
+            document.getElementById('editNgayBatDau').value = formatForDatetimeLocal(start);
+            document.getElementById('editNgayKetThuc').value = formatForDatetimeLocal(end);
+
+            editModal.show();
+        });
+    });
+
+    // 6. SỰ KIỆN NÚT XÓA (OPEN DELETE MODAL)
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteCouponModal'));
+    document.querySelectorAll('.btn-delete-coupon').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            const code = this.getAttribute('data-code');
+            const name = this.getAttribute('data-name');
+
+            document.getElementById('deleteCouponCodeDisplay').textContent = code;
+            document.getElementById('deleteCouponNameDisplay').textContent = name;
+            document.getElementById('deleteCouponForm').action = '/admin/coupons/' + id + '/delete';
+
+            deleteModal.show();
+        });
+    });
+});
+</script>
+</body>
+</html>

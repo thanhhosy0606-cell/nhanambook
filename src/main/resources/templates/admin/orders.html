@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Đơn hàng - BookMind Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/admin.css}" rel="stylesheet">
+</head>
+<body>
+<div id="wrapper">
+    <div th:replace="~{admin/sidebar :: sidebar('orders')}"></div>
+
+    <div id="content">
+        <div class="admin-header">
+            <h5 class="fw-bold mb-0 text-dark">Quản lý Đơn hàng</h5>
+            <div class="d-flex align-items-center gap-2">
+                <span class="small text-muted">Lọc theo trạng thái:</span>
+                <div class="btn-group btn-group-sm">
+                    <a th:href="@{/admin/orders(status='ALL', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'ALL' or selectedStatus == null} ? 'btn-primary' : 'btn-outline-secondary'">Tất cả</a>
+                    <a th:href="@{/admin/orders(status='CHO_XAC_NHAN', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'CHO_XAC_NHAN'} ? 'btn-warning' : 'btn-outline-secondary'">Chờ duyệt</a>
+                    <a th:href="@{/admin/orders(status='DA_XAC_NHAN', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'DA_XAC_NHAN'} ? 'btn-info' : 'btn-outline-secondary'">Đã xác nhận</a>
+                    <a th:href="@{/admin/orders(status='DANG_GIAO', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'DANG_GIAO'} ? 'btn-primary' : 'btn-outline-secondary'">Đang giao</a>
+                    <a th:href="@{/admin/orders(status='DA_GIAO', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'DA_GIAO'} ? 'btn-success' : 'btn-outline-secondary'">Đã giao</a>
+                    <a th:href="@{/admin/orders(status='DA_HUY', keyword=${keyword})}" class="btn" 
+                       th:classappend="${selectedStatus == 'DA_HUY'} ? 'btn-danger' : 'btn-outline-secondary'">Đã hủy</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4">
+            <!-- Search Card -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+                <form th:action="@{/admin/orders}" method="get" id="orderSearchForm" class="row g-2 align-items-center">
+                    <input type="hidden" name="status" th:value="${selectedStatus}">
+
+                    <!-- Search Input -->
+                    <div class="col-md-7 col-lg-6">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0 text-muted rounded-start-pill ps-3">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 border-end-0 ps-1" 
+                                   name="keyword" id="orderSearchInput"
+                                   th:value="${keyword}" 
+                                   placeholder="Tìm theo mã đơn (#48), tên khách, SĐT, địa chỉ..."
+                                   autocomplete="off">
+                            <span class="input-group-text bg-light border-start-0 text-muted rounded-end-pill pe-3" 
+                                  id="clearOrderSearchBtn" 
+                                  th:style="${keyword != null and !keyword.isEmpty()} ? 'cursor: pointer;' : 'cursor: pointer; display: none;'"
+                                  title="Xóa từ khóa">
+                                <i class="fa-solid fa-xmark"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="col-md-5 col-lg-6 d-flex align-items-center gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="fa-solid fa-magnifying-glass me-1"></i> Tìm kiếm
+                        </button>
+                        <a th:if="${(keyword != null and !keyword.isEmpty()) or (selectedStatus != null and selectedStatus != 'ALL')}" 
+                           th:href="@{/admin/orders}" 
+                           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Bỏ lọc
+                        </a>
+                        <span class="ms-auto text-muted small">
+                            Tổng: <strong class="text-primary" id="orderCountBadge" th:text="${orderPage.totalElements}">0</strong> đơn
+                        </span>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Auto-Cancel Scheduler Status Bar -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4" style="background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%); border-left: 4px solid #006a31 !important;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle bg-success bg-opacity-10 text-success d-flex align-items-center justify-content-center flex-shrink-0" style="width: 42px; height: 42px;">
+                            <i class="fa-solid fa-clock-rotate-left fa-lg"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="fw-bold text-dark small">Tự động hủy đơn chưa thanh toán (@Scheduled)</span>
+                                <span class="badge bg-success rounded-pill" style="font-size: 11px;">
+                                    <i class="fa-solid fa-circle-dot me-1"></i>Đang chạy mỗi 60 giây
+                                </span>
+                                <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill" style="font-size: 11px;"
+                                      th:text="'Quá hạn sau ' + ${unpaidTimeoutMinutes} + ' phút'">Quá hạn sau 15 phút</span>
+                            </div>
+                            <div class="small text-muted mt-1">
+                                Đơn online chờ thanh toán: <strong class="text-dark" th:text="${pendingUnpaidCount}">0</strong>
+                                • Quá hạn chưa hủy: <strong class="text-danger" th:text="${expiredUnpaidCount}">0</strong>
+                                <span th:if="${lastAutoCancelCheckTime != null}">
+                                    • Quét gần nhất: <strong class="text-success" th:text="${#temporals.format(lastAutoCancelCheckTime, 'HH:mm:ss dd/MM/yyyy')}">--:--</strong>
+                                </span>
+                            </div>
+                            <div th:if="${autoCancelResult != null}" class="small text-success fw-semibold mt-1">
+                                <i class="fa-solid fa-circle-check me-1"></i><span th:text="${autoCancelResult}"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <form th:action="@{/admin/orders/auto-cancel-now}" method="post" class="m-0">
+                        <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="fa-solid fa-bolt me-1"></i> Quét &amp; Hủy đơn quá hạn ngay
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-custom">
+                        <thead>
+                            <tr class="text-nowrap">
+                                <th class="text-nowrap">Mã đơn</th>
+                                <th class="text-nowrap">Ngày đặt</th>
+                                <th class="text-nowrap">Khách hàng</th>
+                                <th class="text-nowrap">Địa chỉ giao</th>
+                                <th class="text-nowrap">Tổng tiền</th>
+                                <th class="text-nowrap">Trạng thái hiện tại</th>
+                                <th class="text-center text-nowrap">Cập nhật trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${orderPage.content.isEmpty()}">
+                                <td colspan="7" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-inbox fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                    Không tìm thấy đơn hàng nào phù hợp
+                                </td>
+                            </tr>
+                            <tr th:each="o : ${orderPage.content}"
+                                class="order-row"
+                                th:data-id="${o.maDH}"
+                                th:data-name="${o.hoTenNguoiNhan}"
+                                th:data-phone="${o.sdtNguoiNhan}"
+                                th:data-address="${o.diaChiGiaoHang}">
+                                <td class="fw-bold text-primary">#<span th:text="${o.maDH}">1</span></td>
+                                <td class="text-muted small" th:text="${#temporals.format(o.ngayDat, 'dd/MM/yyyy HH:mm')}">01/01/2026</td>
+                                <td>
+                                    <span class="fw-semibold text-dark d-block" th:text="${o.hoTenNguoiNhan}">Họ tên</span>
+                                    <small class="text-muted" th:text="${o.sdtNguoiNhan}">0987654321</small>
+                                </td>
+                                <td class="small text-secondary text-truncate" style="max-width: 200px;" th:text="${o.diaChiGiaoHang}">Địa chỉ</td>
+                                <td class="fw-bold text-danger" th:text="${#numbers.formatDecimal(o.tongTien, 0, 'POINT', 0, 'POINT') + ' đ'}">100.000 đ</td>
+                                <td>
+                                    <span th:if="${o.trangThai == 'CHO_XAC_NHAN'}" class="badge bg-warning text-dark">Chờ xác nhận</span>
+                                    <span th:if="${o.trangThai == 'DA_XAC_NHAN'}" class="badge bg-info text-dark">Đã xác nhận</span>
+                                    <span th:if="${o.trangThai == 'DANG_GIAO'}" class="badge bg-primary">Đang giao</span>
+                                    <span th:if="${o.trangThai == 'DA_GIAO'}" class="badge bg-success">Đã giao</span>
+                                    <span th:if="${o.trangThai == 'DA_HUY'}" class="badge bg-danger">Đã hủy</span>
+                                    <div th:if="${o.trangThai == 'CHO_XAC_NHAN' and o.ngayDat != null}" class="text-muted mt-1" style="font-size: 11px;">
+                                        <i class="fa-regular fa-clock me-1 text-warning"></i>Hạn TT:
+                                        <span th:text="${#temporals.format(o.ngayDat.plusMinutes(unpaidTimeoutMinutes), 'HH:mm dd/MM')}">12:15</span>
+                                    </div>
+                                    <div th:if="${o.trangThai == 'DA_HUY' and o.ghiChu != null and #strings.contains(o.ghiChu, 'Tự động hủy')}"
+                                         class="text-danger fw-semibold mt-1" style="font-size: 11px;">
+                                        <i class="fa-solid fa-robot me-1"></i>Tự động hủy (Quá hạn TT)
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <form th:action="@{/admin/orders/{id}/status(id=${o.maDH})}" method="post" class="d-inline-flex gap-1 align-items-center">
+                                        <select name="status" class="form-select form-select-sm" style="width: 145px;">
+                                            <option value="CHO_XAC_NHAN" th:selected="${o.trangThai == 'CHO_XAC_NHAN'}">Chờ xác nhận</option>
+                                            <option value="DA_XAC_NHAN" th:selected="${o.trangThai == 'DA_XAC_NHAN'}">Đã xác nhận</option>
+                                            <option value="DANG_GIAO" th:selected="${o.trangThai == 'DANG_GIAO'}">Đang giao hàng</option>
+                                            <option value="DA_GIAO" th:selected="${o.trangThai == 'DA_GIAO'}">Đã giao</option>
+                                            <option value="DA_HUY" th:selected="${o.trangThai == 'DA_HUY'}">Hủy đơn</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" title="Lưu trạng thái">
+                                            <i class="fa-solid fa-check"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Compact Modern Pagination -->
+            <nav class="mt-4 d-flex justify-content-center" th:if="${orderPage.totalPages > 1}"
+                 th:with="totalPages=${orderPage.totalPages},
+                          curr=${orderPage.number},
+                          startPage=${T(java.lang.Math).max(0, curr - 2)},
+                          endPage=${T(java.lang.Math).min(totalPages - 1, curr + 2)}">
+                <ul class="pagination pagination-modern mb-0">
+                    <li class="page-item" th:classappend="${orderPage.first} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/orders(page=${curr - 1}, status=${selectedStatus}, keyword=${keyword})}"><i class="fa-solid fa-chevron-left"></i></a>
+                    </li>
+                    <li class="page-item" th:if="${startPage > 0}">
+                        <a class="page-link" th:href="@{/admin/orders(page=0, status=${selectedStatus}, keyword=${keyword})}">1</a>
+                    </li>
+                    <li class="page-item disabled" th:if="${startPage > 1}">
+                        <span class="page-link border-0 text-muted px-2">…</span>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                        th:classappend="${orderPage.number == i} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/orders(page=${i}, status=${selectedStatus}, keyword=${keyword})}" th:text="${i + 1}"></a>
+                    </li>
+                    <li class="page-item disabled" th:if="${endPage < totalPages - 2}">
+                        <span class="page-link border-0 text-muted px-2">…</span>
+                    </li>
+                    <li class="page-item" th:if="${endPage < totalPages - 1}">
+                        <a class="page-link" th:href="@{/admin/orders(page=${totalPages - 1}, status=${selectedStatus}, keyword=${keyword})}" th:text="${totalPages}"></a>
+                    </li>
+                    <li class="page-item" th:classappend="${orderPage.last} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/orders(page=${curr + 1}, status=${selectedStatus}, keyword=${keyword})}"><i class="fa-solid fa-chevron-right"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('orderSearchInput');
+    const searchForm = document.getElementById('orderSearchForm');
+    const clearBtn = document.getElementById('clearOrderSearchBtn');
+    const tableRows = document.querySelectorAll('.order-row');
+    const countBadge = document.getElementById('orderCountBadge');
+
+    function removeVietnameseTones(str) {
+        if (!str) return '';
+        return str.normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+            .toLowerCase();
+    }
+
+    let debounceTimer = null;
+
+    if (searchInput) {
+        // Tự động focus ở cuối input nếu đã có keyword
+        if (searchInput.value) {
+            const val = searchInput.value;
+            searchInput.focus();
+            searchInput.setSelectionRange(val.length, val.length);
+        }
+
+        searchInput.addEventListener('input', function () {
+            const rawQuery = this.value.trim().toLowerCase().replace('#', '');
+            const cleanQuery = removeVietnameseTones(rawQuery);
+
+            if (clearBtn) {
+                clearBtn.style.display = rawQuery ? 'flex' : 'none';
+            }
+
+            // A. Lọc tức thì trên trang
+            let visibleCount = 0;
+            tableRows.forEach(row => {
+                const id = (row.getAttribute('data-id') || '').toLowerCase();
+                const name = (row.getAttribute('data-name') || '').toLowerCase();
+                const phone = (row.getAttribute('data-phone') || '').toLowerCase();
+                const address = (row.getAttribute('data-address') || '').toLowerCase();
+
+                const cleanName = removeVietnameseTones(name);
+                const cleanAddress = removeVietnameseTones(address);
+
+                const isMatch = !rawQuery ||
+                    id.includes(rawQuery) ||
+                    name.includes(rawQuery) || cleanName.includes(cleanQuery) ||
+                    phone.includes(rawQuery) ||
+                    address.includes(rawQuery) || cleanAddress.includes(cleanQuery);
+
+                if (isMatch) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (countBadge && rawQuery) {
+                countBadge.textContent = visibleCount;
+            }
+
+            // B. Tự động tìm kiếm server sau 450ms
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            }, 450);
+        });
+
+        // Nhấn phím Enter
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            }
+        });
+
+        // Nút xóa từ khóa (x)
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                clearTimeout(debounceTimer);
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            });
+        }
+    }
+});
+</script>
+</body>
+</html>

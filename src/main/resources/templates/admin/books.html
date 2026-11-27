@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Sách - BookMind Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link th:href="@{/css/admin.css}" rel="stylesheet">
+</head>
+<body>
+<div id="wrapper">
+    <div th:replace="~{admin/sidebar :: sidebar('books')}"></div>
+
+    <div id="content">
+        <!-- Top Admin Header -->
+        <div class="admin-header">
+            <div>
+                <h5 class="fw-bold mb-0 text-dark">Quản lý Sách</h5>
+                <small class="text-muted">Kho sách, giá bán, tồn kho và danh mục phát hành</small>
+            </div>
+            <button class="btn btn-primary rounded-pill btn-sm px-3 fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                <i class="fa-solid fa-plus me-1"></i> Thêm sách mới
+            </button>
+        </div>
+
+        <div class="p-4">
+            <!-- Search & Filter Card -->
+            <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+                <form th:action="@{/admin/books}" method="get" id="bookSearchForm" class="row g-2 align-items-center">
+                    <!-- Search Input -->
+                    <div class="col-md-5 col-lg-4">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light border-end-0 text-muted rounded-start-pill ps-3">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0 border-end-0 ps-1" 
+                                   name="keyword" id="bookSearchInput"
+                                   th:value="${keyword}" 
+                                   placeholder="Tìm theo tên sách, tác giả, ISBN..."
+                                   autocomplete="off">
+                            <span class="input-group-text bg-light border-start-0 text-muted rounded-end-pill pe-3" 
+                                  id="clearSearchBtn" 
+                                  th:style="${keyword != null and !keyword.isEmpty()} ? 'cursor: pointer;' : 'cursor: pointer; display: none;'"
+                                  title="Xóa từ khóa">
+                                <i class="fa-solid fa-xmark"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="col-sm-6 col-md-3 col-lg-3">
+                        <select class="form-select form-select-sm rounded-pill" name="maLoai" onchange="this.form.submit()">
+                            <option value="" th:selected="${selectedLoai == null}">-- Tất cả loại sách --</option>
+                            <option th:each="c : ${categories}" 
+                                    th:value="${c.maLoai}" 
+                                    th:text="${c.tenLoai}"
+                                    th:selected="${selectedLoai != null and selectedLoai == c.maLoai}">Loại sách</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="col-sm-6 col-md-2 col-lg-2">
+                        <select class="form-select form-select-sm rounded-pill" name="trangThai" onchange="this.form.submit()">
+                            <option value="ALL" th:selected="${selectedTrangThai == null or selectedTrangThai == 'ALL'}">-- Tất cả trạng thái --</option>
+                            <option value="DANG_BAN" th:selected="${selectedTrangThai == 'DANG_BAN'}">Đang bán</option>
+                            <option value="NGUNG_BAN" th:selected="${selectedTrangThai == 'NGUNG_BAN'}">Ngừng bán</option>
+                            <option value="HET_HANG" th:selected="${selectedTrangThai == 'HET_HANG'}">Hết hàng</option>
+                        </select>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="col-md-2 col-lg-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 fw-semibold">
+                            <i class="fa-solid fa-filter me-1"></i> Lọc
+                        </button>
+                        <a th:if="${(keyword != null and !keyword.isEmpty()) or selectedLoai != null or (selectedTrangThai != null and selectedTrangThai != 'ALL')}" 
+                           th:href="@{/admin/books}" 
+                           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Bỏ lọc
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Books Table -->
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white">
+                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-book-bookmark text-primary me-2"></i>Danh sách đầu sách
+                    </h6>
+                    <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill small" id="totalBooksBadge">
+                        <span th:if="${keyword != null and !keyword.isEmpty()}">
+                            Tìm thấy: <strong class="text-primary" th:text="${bookPage.totalElements}">0</strong> cuốn sách
+                        </span>
+                        <span th:unless="${keyword != null and !keyword.isEmpty()}">
+                            Tổng cộng: <strong class="text-primary" th:text="${bookPage.totalElements}">271</strong> cuốn sách
+                        </span>
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 table-hover table-custom" id="booksTable">
+                        <thead>
+                            <tr class="text-nowrap">
+                                <th class="text-nowrap" style="width: 70px;">Ảnh</th>
+                                <th class="text-nowrap">Tên sách & ISBN</th>
+                                <th class="text-nowrap">Loại sách</th>
+                                <th class="text-nowrap">Tác giả</th>
+                                <th class="text-nowrap">Giá bán</th>
+                                <th class="text-center text-nowrap">Tồn kho</th>
+                                <th class="text-center text-nowrap">Trạng thái</th>
+                                <th class="text-center text-nowrap" style="width: 230px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${bookPage.content.isEmpty()}">
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <i class="fa-regular fa-folder-open fa-2x mb-2 text-secondary opacity-50 d-block"></i>
+                                    Không tìm thấy đầu sách nào phù hợp với bộ lọc
+                                </td>
+                            </tr>
+                            <tr th:each="b : ${bookPage.content}" class="book-row"
+                                th:data-id="${b.maSach}"
+                                th:data-title="${b.tenSach}"
+                                th:data-cat="${b.loaiSach != null ? b.loaiSach.maLoai : ''}"
+                                th:data-author="${b.tacGia}"
+                                th:data-isbn="${b.isbn}"
+                                th:data-price="${b.giaBan}"
+                                th:data-stock="${b.soLuong}"
+                                th:data-image="${b.hinhAnh}"
+                                th:data-desc="${b.moTa}"
+                                th:data-nxb="${b.nxb}"
+                                th:data-nam="${b.namXb}"
+                                th:data-pages="${b.soTrang}"
+                                th:data-status="${b.trangThai}">
+                                <td>
+                                    <img th:src="${b.hinhAnh != null and !b.hinhAnh.isEmpty() ? b.hinhAnh : 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100'}" 
+                                         alt="Cover" class="rounded-3 shadow-sm border" style="width: 48px; height: 64px; object-fit: cover;">
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-dark d-block text-truncate" style="max-width: 240px;" th:text="${b.tenSach}">Tên sách</span>
+                                    <small class="text-muted" th:text="'ISBN: ' + ${b.isbn != null and !b.isbn.isEmpty() ? b.isbn : 'Chưa có'}">ISBN</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border" th:text="${b.loaiSach != null ? b.loaiSach.tenLoai : 'Khác'}">Loại sách</span>
+                                </td>
+                                <td class="text-secondary small" th:text="${b.tacGia}">Tác giả</td>
+                                <td class="fw-bold text-danger" th:text="${#numbers.formatDecimal(b.giaBan, 0, 'POINT', 0, 'POINT') + ' đ'}">150.000 đ</td>
+                                <td class="text-center">
+                                    <span class="badge rounded-pill px-2 py-1"
+                                          th:classappend="${b.soLuong > 10} ? 'bg-light text-dark border' : (${b.soLuong > 0} ? 'bg-warning bg-opacity-25 text-dark' : 'bg-danger text-white')"
+                                          th:text="${b.soLuong} + ' cuốn'">50</span>
+                                </td>
+                                <td class="text-center">
+                                    <span th:if="${b.trangThai == 'DANG_BAN'}" class="badge bg-success bg-opacity-10 text-success border border-success-subtle px-2 py-1">
+                                        <i class="fa-solid fa-circle-check me-1"></i>Đang bán
+                                    </span>
+                                    <span th:if="${b.trangThai == 'HET_HANG'}" class="badge bg-warning bg-opacity-25 text-dark border border-warning-subtle px-2 py-1">
+                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>Hết hàng
+                                    </span>
+                                    <span th:if="${b.trangThai == 'NGUNG_BAN'}" class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-2 py-1">
+                                        <i class="fa-solid fa-ban me-1"></i>Ngừng bán
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-inline-flex align-items-center gap-1">
+                                        <!-- Nút Sửa Sách -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1 btn-edit-book"
+                                                th:data-id="${b.maSach}"
+                                                th:data-title="${b.tenSach}"
+                                                th:data-cat="${b.loaiSach != null ? b.loaiSach.maLoai : ''}"
+                                                th:data-author="${b.tacGia}"
+                                                th:data-isbn="${b.isbn}"
+                                                th:data-price="${b.giaBan}"
+                                                th:data-stock="${b.soLuong}"
+                                                th:data-image="${b.hinhAnh}"
+                                                th:data-desc="${b.moTa}"
+                                                th:data-nxb="${b.nxb}"
+                                                th:data-nam="${b.namXb}"
+                                                th:data-pages="${b.soTrang}"
+                                                th:data-status="${b.trangThai}"
+                                                title="Chỉnh sửa thông tin sách">
+                                            <i class="fa-solid fa-pen-to-square me-1"></i>Sửa
+                                        </button>
+
+                                        <!-- Nút Ngừng / Bật bán -->
+                                        <form th:action="@{/admin/books/{id}/toggle(id=${b.maSach})}" method="post" class="d-inline">
+                                            <button type="submit" class="btn btn-sm rounded-pill px-2 py-1"
+                                                    th:classappend="${b.trangThai == 'DANG_BAN'} ? 'btn-outline-secondary' : 'btn-outline-success'"
+                                                    th:title="${b.trangThai == 'DANG_BAN' ? 'Chuyển sang Ngừng bán' : 'Chuyển sang Đang bán'}">
+                                                <i class="fa-solid" th:classappend="${b.trangThai == 'DANG_BAN'} ? 'fa-power-off' : 'fa-play'"></i>
+                                                <span th:text="${b.trangThai == 'DANG_BAN' ? 'Ngừng' : 'Bật'}"></span>
+                                            </button>
+                                        </form>
+
+                                        <!-- Nút Xóa Sách -->
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1 btn-delete-book"
+                                                th:data-id="${b.maSach}"
+                                                th:data-title="${b.tenSach}"
+                                                th:data-image="${b.hinhAnh}"
+                                                title="Xóa cuốn sách">
+                                            <i class="fa-solid fa-trash me-1"></i>Xóa
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Compact Modern Pagination -->
+            <nav class="mt-4 d-flex justify-content-center" th:if="${bookPage.totalPages > 1}"
+                 th:with="totalPages=${bookPage.totalPages},
+                          curr=${bookPage.number},
+                          startPage=${T(java.lang.Math).max(0, curr - 2)},
+                          endPage=${T(java.lang.Math).min(totalPages - 1, curr + 2)}">
+                <ul class="pagination pagination-modern mb-0">
+                    <li class="page-item" th:classappend="${bookPage.first} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/books(page=${curr - 1}, keyword=${keyword}, maLoai=${selectedLoai}, trangThai=${selectedTrangThai})}">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item" th:if="${startPage > 0}">
+                        <a class="page-link" th:href="@{/admin/books(page=0, keyword=${keyword}, maLoai=${selectedLoai}, trangThai=${selectedTrangThai})}">1</a>
+                    </li>
+                    <li class="page-item disabled" th:if="${startPage > 1}">
+                        <span class="page-link border-0 text-muted px-2">…</span>
+                    </li>
+                    <li class="page-item" th:each="i : ${#numbers.sequence(startPage, endPage)}"
+                        th:classappend="${bookPage.number == i} ? 'active'">
+                        <a class="page-link" th:href="@{/admin/books(page=${i}, keyword=${keyword}, maLoai=${selectedLoai}, trangThai=${selectedTrangThai})}" th:text="${i + 1}"></a>
+                    </li>
+                    <li class="page-item disabled" th:if="${endPage < totalPages - 2}">
+                        <span class="page-link border-0 text-muted px-2">…</span>
+                    </li>
+                    <li class="page-item" th:if="${endPage < totalPages - 1}">
+                        <a class="page-link" th:href="@{/admin/books(page=${totalPages - 1}, keyword=${keyword}, maLoai=${selectedLoai}, trangThai=${selectedTrangThai})}" th:text="${totalPages}"></a>
+                    </li>
+                    <li class="page-item" th:classappend="${bookPage.last} ? 'disabled'">
+                        <a class="page-link" th:href="@{/admin/books(page=${curr + 1}, keyword=${keyword}, maLoai=${selectedLoai}, trangThai=${selectedTrangThai})}">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL THÊM SÁCH MỚI (ADD BOOK MODAL) -->
+<!-- ========================================== -->
+<div class="modal fade" id="addBookModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form th:action="@{/admin/books/save}" method="post" th:object="${sachForm}">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fa-solid fa-book text-primary me-2"></i>Thêm sách mới vào kho
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Tên sách <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" th:field="*{tenSach}" placeholder="Nhập tiêu đề cuốn sách..." required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Loại sách <span class="text-danger">*</span></label>
+                            <select class="form-select rounded-3" th:field="*{maLoai}" required>
+                                <option th:each="c : ${categories}" th:value="${c.maLoai}" th:text="${c.tenLoai}">Công nghệ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tác giả <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" th:field="*{tacGia}" placeholder="Tác giả / Dịch giả..." required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Mã ISBN</label>
+                            <input type="text" class="form-control rounded-3" th:field="*{isbn}" placeholder="978-604-...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Giá bán (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" th:field="*{giaBan}" min="0" step="any" placeholder="100000" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Số lượng tồn kho <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" th:field="*{soLuong}" min="0" placeholder="50" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nhà xuất bản</label>
+                            <input type="text" class="form-control rounded-3" th:field="*{nxb}" placeholder="NXB Hội Nhà Văn, NXB Thế Giới...">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Năm XB</label>
+                            <input type="number" class="form-control rounded-3" th:field="*{namXb}" min="1900" max="2100" placeholder="2026">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Số trang</label>
+                            <input type="number" class="form-control rounded-3" th:field="*{soTrang}" min="1" placeholder="320">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Đường dẫn ảnh bìa (URL)</label>
+                            <input type="text" class="form-control rounded-3" th:field="*{hinhAnh}" placeholder="https://images.unsplash.com/photo-...">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Mô tả tóm tắt nội dung sách</label>
+                            <textarea class="form-control rounded-3" rows="4" th:field="*{moTa}" placeholder="Giới thiệu nội dung, tóm tắt tác phẩm..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-plus me-1"></i> Thêm vào kho
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL CHỈNH SỬA SÁCH (EDIT BOOK MODAL) -->
+<!-- ========================================== -->
+<div class="modal fade" id="editBookModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form th:action="@{/admin/books/save}" method="post">
+                <input type="hidden" name="maSach" id="editBookMaSach">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="fa-solid fa-pen-to-square text-primary me-2"></i>Chỉnh sửa thông tin sách
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Tên sách <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" name="tenSach" id="editBookTenSach" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Loại sách <span class="text-danger">*</span></label>
+                            <select class="form-select rounded-3" name="maLoai" id="editBookMaLoai" required>
+                                <option th:each="c : ${categories}" th:value="${c.maLoai}" th:text="${c.tenLoai}">Công nghệ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tác giả <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control rounded-3" name="tacGia" id="editBookTacGia" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Mã ISBN</label>
+                            <input type="text" class="form-control rounded-3" name="isbn" id="editBookIsbn">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Giá bán (VNĐ) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" name="giaBan" id="editBookGiaBan" min="0" step="any" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Số lượng tồn kho <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control rounded-3" name="soLuong" id="editBookSoLuong" min="0" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nhà xuất bản</label>
+                            <input type="text" class="form-control rounded-3" name="nxb" id="editBookNxb">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Năm XB</label>
+                            <input type="number" class="form-control rounded-3" name="namXb" id="editBookNamXb" min="1900" max="2100">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Số trang</label>
+                            <input type="number" class="form-control rounded-3" name="soTrang" id="editBookSoTrang" min="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Trạng thái phát hành</label>
+                            <select class="form-select rounded-3" name="trangThai" id="editBookTrangThai">
+                                <option value="DANG_BAN">Đang bán</option>
+                                <option value="NGUNG_BAN">Ngừng bán</option>
+                                <option value="HET_HANG">Hết hàng</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Đường dẫn ảnh bìa (URL)</label>
+                            <input type="text" class="form-control rounded-3" name="hinhAnh" id="editBookHinhAnh">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Mô tả tóm tắt nội dung sách</label>
+                            <textarea class="form-control rounded-3" rows="4" name="moTa" id="editBookMoTa"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL XÓA SÁCH (DELETE BOOK MODAL) -->
+<!-- ========================================== -->
+<div class="modal fade" id="deleteBookModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <form id="deleteBookForm" method="post">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i>Xác nhận xóa sách
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <div class="mb-3">
+                        <img id="deleteBookCover" src="" class="rounded-3 shadow-sm border mb-2" style="width: 65px; height: 85px; object-fit: cover;" alt="Bìa sách" onerror="this.style.display='none'">
+                    </div>
+                    <h6 class="fw-bold text-dark mb-2" id="deleteBookTitle">Tên cuốn sách</h6>
+                    <p class="text-muted small mb-3">
+                        Mã sách: <strong class="text-primary" id="deleteBookIdDisplay">#0</strong>
+                    </p>
+                    <p class="text-dark mb-3">Bạn có chắc chắn muốn xóa sách này không?</p>
+                    <div class="d-flex align-items-start gap-2 text-start small bg-light text-secondary p-3 rounded-3 mb-0">
+                        <i class="fa-solid fa-shield-halved text-secondary mt-1 flex-shrink-0"></i>
+                        <span>Lưu ý: Nếu sách đã có trong <strong>đơn hàng</strong> hoặc <strong>giỏ hàng</strong>, hệ thống sẽ chuyển sang trạng thái <strong>“Ngừng bán”</strong> thay vì xóa</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 justify-content-center">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-semibold">
+                        <i class="fa-solid fa-trash me-1"></i> Xác nhận xóa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const editModal = new bootstrap.Modal(document.getElementById('editBookModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteBookModal'));
+
+    // 1. SỰ KIỆN NÚT SỬA SÁCH
+    document.querySelectorAll('.btn-edit-book').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            const title = this.getAttribute('data-title') || '';
+            const cat = this.getAttribute('data-cat') || '';
+            const author = this.getAttribute('data-author') || '';
+            const isbn = this.getAttribute('data-isbn') || '';
+            const price = this.getAttribute('data-price') || '0';
+            const stock = this.getAttribute('data-stock') || '0';
+            const image = this.getAttribute('data-image') || '';
+            const desc = this.getAttribute('data-desc') || '';
+            const nxb = this.getAttribute('data-nxb') || '';
+            const nam = this.getAttribute('data-nam') || '';
+            const pages = this.getAttribute('data-pages') || '';
+            const status = this.getAttribute('data-status') || 'DANG_BAN';
+
+            document.getElementById('editBookMaSach').value = id;
+            document.getElementById('editBookTenSach').value = title;
+            document.getElementById('editBookMaLoai').value = cat;
+            document.getElementById('editBookTacGia').value = author;
+            document.getElementById('editBookIsbn').value = isbn;
+            document.getElementById('editBookGiaBan').value = parseFloat(price).toFixed(0);
+            document.getElementById('editBookSoLuong').value = stock;
+            document.getElementById('editBookNxb').value = nxb;
+            document.getElementById('editBookNamXb').value = nam;
+            document.getElementById('editBookSoTrang').value = pages;
+            document.getElementById('editBookHinhAnh').value = image;
+            document.getElementById('editBookMoTa').value = desc;
+            document.getElementById('editBookTrangThai').value = status;
+
+            editModal.show();
+        });
+    });
+
+    // 2. SỰ KIỆN NÚT XÓA SÁCH
+    document.querySelectorAll('.btn-delete-book').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const id = this.getAttribute('data-id');
+            const title = this.getAttribute('data-title');
+            const image = this.getAttribute('data-image') || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=100';
+
+            document.getElementById('deleteBookIdDisplay').textContent = '#' + id;
+            document.getElementById('deleteBookTitle').textContent = title;
+            document.getElementById('deleteBookCover').src = image;
+            document.getElementById('deleteBookCover').style.display = 'inline-block';
+            document.getElementById('deleteBookForm').action = '/admin/books/' + id + '/delete';
+
+            deleteModal.show();
+        });
+    });
+
+    // 3. TÌM KIẾM SÁCH (TỨC THÌ TRÊN TRANG + TỰ ĐỘNG LỌC TOÀN BỘ CƠ SỞ DỮ LIỆU)
+    const searchInput = document.getElementById('bookSearchInput');
+    const searchForm = document.getElementById('bookSearchForm');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    const tableRows = document.querySelectorAll('.book-row');
+    const totalBadge = document.getElementById('totalBooksBadge');
+
+    function removeVietnameseTones(str) {
+        if (!str) return '';
+        return str.normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/đ/g, 'd').replace(/Đ/g, 'D')
+            .toLowerCase();
+    }
+
+    let debounceTimer = null;
+
+    if (searchInput) {
+        // Tự động focus ở cuối input nếu đã có keyword
+        if (searchInput.value) {
+            const val = searchInput.value;
+            searchInput.focus();
+            searchInput.setSelectionRange(val.length, val.length);
+        }
+
+        searchInput.addEventListener('input', function () {
+            const rawQuery = this.value.trim().toLowerCase();
+            const cleanQuery = removeVietnameseTones(rawQuery);
+
+            if (clearBtn) {
+                clearBtn.style.display = rawQuery ? 'flex' : 'none';
+            }
+
+            // A. Lọc tức thì trên trang hiện tại
+            let visibleCount = 0;
+            tableRows.forEach(row => {
+                const title = (row.getAttribute('data-title') || '').toLowerCase();
+                const author = (row.getAttribute('data-author') || '').toLowerCase();
+                const isbn = (row.getAttribute('data-isbn') || '').toLowerCase();
+                const id = (row.getAttribute('data-id') || '').toLowerCase();
+
+                const cleanTitle = removeVietnameseTones(title);
+                const cleanAuthor = removeVietnameseTones(author);
+
+                const isMatch = !rawQuery ||
+                    title.includes(rawQuery) || cleanTitle.includes(cleanQuery) ||
+                    author.includes(rawQuery) || cleanAuthor.includes(cleanQuery) ||
+                    isbn.includes(rawQuery) || id.includes(rawQuery);
+
+                if (isMatch) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (totalBadge && rawQuery) {
+                totalBadge.innerHTML = 'Tìm thấy: <strong class="text-primary">' + visibleCount + '</strong> cuốn sách trên trang này';
+            }
+
+            // B. Tự động tìm kiếm trên TOÀN BỘ CƠ SỞ DỮ LIỆU sau 450ms (Debounce Server Search)
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            }, 450);
+        });
+
+        // Bấm Enter -> submit ngay lập tức
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            }
+        });
+
+        // Nút Xóa nhanh từ khóa (Clear X button)
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                clearBtn.style.display = 'none';
+                clearTimeout(debounceTimer);
+                if (searchForm) {
+                    searchForm.submit();
+                }
+            });
+        }
+    }
+});
+</script>
+</body>
+</html>
