@@ -1,0 +1,447 @@
+:root {
+    --admin-sidebar-width: 260px;
+    --admin-primary: #006a31;
+    --admin-primary-dark: #004d24;
+    --admin-bg: #f8fafc;
+}
+
+body {
+    background-color: var(--admin-bg);
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+}
+
+.text-primary {
+    color: var(--admin-primary) !important;
+}
+
+.bg-primary {
+    background-color: var(--admin-primary) !important;
+}
+
+.btn-primary {
+    background-color: var(--admin-primary);
+    border-color: var(--admin-primary);
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: var(--admin-primary-dark) !important;
+    border-color: var(--admin-primary-dark) !important;
+}
+
+.btn-outline-primary {
+    color: var(--admin-primary);
+    border-color: var(--admin-primary);
+}
+
+.btn-outline-primary:hover, .btn-outline-primary:focus {
+    background-color: var(--admin-primary) !important;
+    border-color: var(--admin-primary) !important;
+    color: #fff !important;
+}
+
+#wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+#sidebar {
+    width: var(--admin-sidebar-width);
+    background: #08331b;
+    color: #d1fae5;
+    flex-shrink: 0;
+    transition: all 0.25s ease;
+    border-right: 1px solid #114c2a;
+    box-shadow: none;
+}
+
+#sidebar .brand {
+    padding: 1.25rem 1.25rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ffffff;
+    border-bottom: 1px solid #114c2a;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+#sidebar .nav-link {
+    color: #d1fae5;
+    padding: 0.7rem 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    font-weight: 500;
+    font-size: 0.92rem;
+    border-radius: 0.6rem;
+    margin: 0.4rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(209, 250, 229, 0.16);
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+#sidebar .nav-link:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(209, 250, 229, 0.35);
+    transform: none;
+}
+
+#sidebar .nav-link.active {
+    color: #ffffff;
+    background: #006a31;
+    border: 1px solid #34d399;
+    font-weight: 600;
+    box-shadow: none;
+}
+
+#sidebar .nav-link.active i {
+    color: #ffffff !important;
+}
+
+#sidebar .nav-link i {
+    width: 22px;
+    text-align: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+#content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.admin-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-icon.bg-primary {
+    background-color: rgba(0, 106, 49, 0.12) !important;
+    color: var(--admin-primary) !important;
+}
+
+.table-custom {
+    background: #ffffff;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.table-custom thead {
+    background: #f0fdf4;
+    border-bottom: 2px solid #bbf7d0;
+}
+
+.table-custom th {
+    padding: 0.85rem 1rem;
+    font-weight: 700;
+    color: #065f46;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    white-space: nowrap !important;
+    vertical-align: middle;
+}
+
+.table-custom td {
+    padding: 0.85rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* ========================================================
+   MODERN COMPACT PAGINATION
+   ======================================================== */
+.pagination-modern {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #ffffff;
+    padding: 6px 8px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.pagination-modern .page-item {
+    margin: 0;
+}
+
+.pagination-modern .page-link {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px !important;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #334155;
+    background: transparent;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.pagination-modern .page-link:hover {
+    background-color: #f1f8f3;
+    color: var(--admin-primary);
+    border-color: rgba(0, 106, 49, 0.2);
+}
+
+.pagination-modern .page-item.active .page-link {
+    background: var(--admin-primary) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
+    box-shadow: 0 3px 8px rgba(0, 106, 49, 0.3);
+}
+
+.pagination-modern .page-item.disabled .page-link {
+    color: #cbd5e1;
+    background: transparent;
+    border-color: transparent;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* ========================================================
+   REVENUE & PDF REPORT PRINT STYLES
+   ======================================================== */
+@media print {
+    body {
+        background-color: #ffffff !important;
+        font-size: 12pt;
+    }
+
+    #sidebar, .admin-header, .d-print-none, .btn {
+        display: none !important;
+    }
+
+    #content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    #pdfReportWrapper {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .pdf-container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+}
+
+/* ==========================================================================
+   FLOATING TOAST NOTIFICATIONS (Góc trên bên phải màn hình)
+   ========================================================================== */
+.app-toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.app-toast {
+    pointer-events: auto;
+    min-width: 320px;
+    max-width: 440px;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.07);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: toastSlideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.app-toast.toast-hiding {
+    opacity: 0;
+    transform: translateX(50px) scale(0.92);
+    margin-top: -45px;
+    pointer-events: none;
+}
+
+.app-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+}
+
+.app-toast-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 15px;
+}
+
+.app-toast.toast-success {
+    border-left: 5px solid #006a31;
+}
+.app-toast.toast-success .app-toast-icon {
+    background: rgba(0, 106, 49, 0.12);
+    color: #006a31;
+}
+
+.app-toast.toast-error {
+    border-left: 5px solid #ef4444;
+}
+.app-toast.toast-error .app-toast-icon {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+.app-toast.toast-info {
+    border-left: 5px solid #0284c7;
+}
+.app-toast.toast-info .app-toast-icon {
+    background: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+}
+
+.app-toast.toast-warning {
+    border-left: 5px solid #f59e0b;
+}
+.app-toast.toast-warning .app-toast-icon {
+    background: rgba(245, 158, 11, 0.15);
+    color: #d97706;
+}
+
+.app-toast-message {
+    flex-grow: 1;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1.45;
+}
+
+.app-toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    padding: 4px 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+.app-toast-close:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.app-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    transform-origin: left;
+    animation: toastProgress linear forwards;
+}
+
+.app-toast.toast-success .app-toast-progress {
+    background: #006a31;
+}
+.app-toast.toast-error .app-toast-progress {
+    background: #ef4444;
+}
+.app-toast.toast-info .app-toast-progress {
+    background: #0284c7;
+}
+.app-toast.toast-warning .app-toast-progress {
+    background: #f59e0b;
+}
+
+@keyframes toastSlideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(40px) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toastProgress {
+    from {
+        transform: scaleX(1);
+    }
+    to {
+        transform: scaleX(0);
+    }
+}
+
+/* ========================================================
+   SEARCHABLE BOOK PICKER DROPDOWN
+   ======================================================== */
+.book-dropdown-results {
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+}
+
+.book-option-item {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+}
+
+.book-option-item:hover, .book-option-item:focus {
+    background-color: #f0fdf4 !important;
+}
+
+.book-option-item.d-none {
+    display: none !important;
+}
+
+

@@ -1,0 +1,32 @@
+# ===================================================================
+# Sample Local Configuration (Copy to application-local.properties)
+# File application-local.properties is ignored by Git (.gitignore)
+# ===================================================================
+
+# 1. MySQL Database
+spring.datasource.password=your_mysql_password
+
+# 2. PayOS Payment Gateway (https://my.payos.vn)
+payos.client-id=
+payos.api-key=
+payos.checksum-key=
+
+# 3. MoMo Sandbox / Gateway (https://developers.momo.vn)
+momo.access-key=
+momo.secret-key=
+
+# 4. Fallback VietQR & MoMo Wallet Info (Optional)
+vietqr.bank.account-number=
+vietqr.bank.account-name=
+momo.wallet.phone=
+momo.wallet.name=
+
+# 5. Google & Facebook OAuth 2.0 (Optional)
+google.oauth2.client-id=
+google.oauth2.client-secret=
+facebook.oauth2.app-id=
+facebook.oauth2.app-secret=
+
+# 6. Gmail SMTP for Password Reset OTP (Optional)
+spring.mail.username=
+spring.mail.password=

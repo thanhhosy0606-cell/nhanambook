@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body th:fragment="navbar">
+<nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2" th:href="@{/}">
+            <img th:src="@{/images/nhanam-logo.png}" alt="Nhã Nam" style="height: 38px; width: auto;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+            <i class="fa-solid fa-book-bookmark text-primary" style="display: none;"></i>
+            <span>Nhã Nam BookStore</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarMain">
+            <!-- Search bar (Use case: Tìm kiếm sách) -->
+            <div class="position-relative mx-auto my-2 my-lg-0 col-12 col-lg-5 search-container" id="searchContainer">
+                <form class="d-flex w-100" th:action="@{/shop/books}" method="get" id="globalSearchForm" autocomplete="off">
+                    <div class="input-group w-100">
+                        <input type="text" name="keyword" id="globalSearchInput" class="form-control search-input" 
+                               th:value="${keyword}" placeholder="Tìm sách theo tên hoặc tác giả..." required>
+                        <button class="btn search-btn" type="submit" aria-label="Tìm kiếm">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Dropdown suggestions & history -->
+                <div id="searchDropdown" class="search-dropdown-menu rounded-4 bg-white border d-none">
+                    <!-- Section 1: Lịch sử tìm kiếm -->
+                    <div id="searchHistorySection" class="p-3 border-bottom">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="small fw-bold text-secondary d-flex align-items-center gap-1">
+                                <i class="fa-solid fa-clock-rotate-left text-primary"></i> Lịch sử tìm kiếm
+                            </span>
+                            <button type="button" class="btn btn-link btn-sm text-muted text-decoration-none p-0" id="clearAllHistoryBtn" style="font-size: 11px;">
+                                Xóa tất cả
+                            </button>
+                        </div>
+                        <div id="searchHistoryList" class="d-flex flex-wrap gap-2">
+                            <!-- Items injected via JS -->
+                        </div>
+                        <div id="searchHistoryEmpty" class="text-muted small fst-italic py-1 d-none" style="font-size: 12px;">
+                            Chưa có lịch sử tìm kiếm gần đây
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Gợi ý tìm kiếm phổ biến -->
+                    <div id="searchSuggestionsSection" class="p-3">
+                        <div class="small fw-bold text-secondary mb-2 d-flex align-items-center gap-1">
+                            <i class="fa-solid fa-fire text-danger"></i> Gợi ý tìm kiếm
+                        </div>
+                        <div class="d-flex flex-wrap gap-2" id="popularKeywordsList">
+                            <button type="button" class="search-tag-badge" data-keyword="Hoàng tử bé">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Hoàng tử bé
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Nhà giả kim">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Nhà giả kim
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Cây cam ngọt của tôi">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Cây cam ngọt của tôi
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Kafka bên bờ biển">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Kafka bên bờ biển
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Chiến binh Cầu vồng">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Chiến binh Cầu vồng
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Tâm lý học về tiền">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Tâm lý học về tiền
+                            </button>
+                            <button type="button" class="search-tag-badge" data-keyword="Trí tuệ Do Thái">
+                                <i class="fa-solid fa-magnifying-glass small text-muted"></i> Trí tuệ Do Thái
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Gợi ý sách theo thời gian thực (khi gõ) -->
+                    <div id="searchLiveResultsSection" class="p-2 d-none">
+                        <div class="px-2 py-1 small fw-bold text-secondary d-flex align-items-center gap-1 border-bottom mb-2">
+                            <i class="fa-solid fa-book-bookmark text-primary"></i> Sách phù hợp
+                        </div>
+                        <div id="searchLiveResultsList" class="d-flex flex-column gap-1">
+                            <!-- Live book items injected here -->
+                        </div>
+                        <div class="text-center pt-2 pb-1 border-top mt-2">
+                            <button type="button" id="viewAllSearchResultsBtn" class="btn btn-sm text-primary fw-semibold text-decoration-none">
+                                Xem tất cả kết quả cho "<span id="searchKeywordPreview"></span>" <i class="fa-solid fa-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="navbar-nav align-items-lg-center gap-lg-2 ms-auto">
+                <!-- Use case: Xem danh mục sách -->
+                <li class="nav-item">
+                    <a class="nav-link fw-semibold" th:href="@{/shop/books}">
+                        <i class="fa-solid fa-layer-group me-1 text-primary"></i> Tất cả sách
+                    </a>
+                </li>
+
+                <!-- Use case: Quản lý giỏ hàng -->
+                <li class="nav-item">
+                    <a class="nav-link fw-semibold position-relative d-inline-flex align-items-center cart-nav-link" th:href="@{/shop/cart}" title="Giỏ hàng của bạn">
+                        <span class="position-relative d-inline-flex align-items-center me-2">
+                            <i class="fa-solid fa-cart-shopping text-primary fs-5"></i>
+                            <span class="cart-badge-count badge rounded-pill bg-danger"
+                                  id="navbarCartBadge"
+                                  th:style="${cartCount != null and cartCount > 0} ? '' : 'display: none !important;'"
+                                  th:text="${cartCount != null and cartCount > 99 ? '99+' : (cartCount != null ? cartCount : 0)}">0</span>
+                        </span>
+                        <span class="ms-1">Giỏ hàng</span>
+                    </a>
+                </li>
+
+                <!-- Auth links (Đăng nhập, Đăng ký, Theo dõi đơn hàng, Admin) -->
+                <th:block th:if="${session.CURRENT_USER == null}">
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/login}">Đăng nhập</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn btn-primary btn-sm px-3 rounded-pill" th:href="@{/register}">Đăng ký</a>
+                    </li>
+                </th:block>
+
+                <th:block th:if="${session.CURRENT_USER != null}">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 fw-semibold" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-circle-user fa-lg text-primary"></i>
+                            <span th:text="${session.CURRENT_CUSTOMER != null ? session.CURRENT_CUSTOMER.hoTen : session.CURRENT_USER.tenDN}">User</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end rounded-3 p-1"
+                            style="border: 1.5px solid #cbd5e1 !important; box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.15) !important;">
+                            <!-- Thông tin cá nhân -->
+                            <li>
+                                <a class="dropdown-item py-2" th:href="@{/shop/profile}">
+                                    <i class="fa-solid fa-id-card me-2 text-primary"></i> Thông tin cá nhân
+                                </a>
+                            </li>
+                            <!-- Theo dõi đơn hàng -->
+                            <li>
+                                <a class="dropdown-item py-2" th:href="@{/shop/my-orders}">
+                                    <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i> Đơn hàng của tôi
+                                </a>
+                            </li>
+                            <!-- Nếu là ADMIN -->
+                            <li th:if="${session.CURRENT_USER.vaiTro == 'ADMIN'}">
+                                <a class="dropdown-item py-2 text-danger fw-bold" th:href="@{/admin}">
+                                    <i class="fa-solid fa-gauge-high me-2"></i> Trang Quản trị
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item py-2 text-muted" th:href="@{/logout}">
+                                    <i class="fa-solid fa-right-from-bracket me-2"></i> Đăng xuất
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </th:block>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Floating Toast Notifications (Góc trên bên phải, tự động biến mất sau ít giây) -->
+<div class="app-toast-container" id="appToastContainer">
+    <!-- Server-side Success Toast -->
+    <div th:if="${successMessage}" class="app-toast toast-success" role="alert" data-auto-dismiss="3500">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-check"></i>
+            </div>
+            <div class="app-toast-message" th:text="${successMessage}">Thao tác thành công!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 3.5s;"></div>
+    </div>
+
+    <!-- Server-side Error Toast -->
+    <div th:if="${errorMessage}" class="app-toast toast-error" role="alert" data-auto-dismiss="4000">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="app-toast-message" th:text="${errorMessage}">Đã xảy ra lỗi!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 4s;"></div>
+    </div>
+
+    <!-- Server-side Warning Toast -->
+    <div th:if="${warningMessage}" class="app-toast toast-warning" role="alert" data-auto-dismiss="7000">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="app-toast-message" th:text="${warningMessage}">Cảnh báo!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 7s;"></div>
+    </div>
+
+    <!-- Server-side Info Toast -->
+    <div th:if="${infoMessage}" class="app-toast toast-info" role="alert" data-auto-dismiss="3500">
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <div class="app-toast-message" th:text="${infoMessage}">Thông báo!</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: 3.5s;"></div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchContainer = document.getElementById('searchContainer');
+    const searchInput = document.getElementById('globalSearchInput');
+    const searchForm = document.getElementById('globalSearchForm');
+    const searchDropdown = document.getElementById('searchDropdown');
+    const historySection = document.getElementById('searchHistorySection');
+    const historyList = document.getElementById('searchHistoryList');
+    const historyEmpty = document.getElementById('searchHistoryEmpty');
+    const clearHistoryBtn = document.getElementById('clearAllHistoryBtn');
+    const suggestionsSection = document.getElementById('searchSuggestionsSection');
+    const liveResultsSection = document.getElementById('searchLiveResultsSection');
+    const liveResultsList = document.getElementById('searchLiveResultsList');
+    const keywordPreview = document.getElementById('searchKeywordPreview');
+    const viewAllBtn = document.getElementById('viewAllSearchResultsBtn');
+
+    if (!searchContainer || !searchInput || !searchDropdown) return;
+
+    const STORAGE_KEY = 'nhanam_search_history';
+
+    function getHistory() {
+        try {
+            const data = localStorage.getItem(STORAGE_KEY);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveHistory(keyword) {
+        if (!keyword || !keyword.trim()) return;
+        const kw = keyword.trim();
+        let list = getHistory().filter(item => item.toLowerCase() !== kw.toLowerCase());
+        list.unshift(kw);
+        if (list.length > 8) list = list.slice(0, 8);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch (e) {}
+    }
+
+    function removeHistoryItem(kw) {
+        let list = getHistory().filter(item => item.toLowerCase() !== kw.toLowerCase());
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch (e) {}
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const list = getHistory();
+        historyList.innerHTML = '';
+        if (list.length === 0) {
+            historyEmpty.classList.remove('d-none');
+        } else {
+            historyEmpty.classList.add('d-none');
+            list.forEach(kw => {
+                const item = document.createElement('div');
+                item.className = 'search-history-item';
+                item.innerHTML = `
+                    <span class="text-truncate" style="max-width: 140px;">${escapeHtml(kw)}</span>
+                    <span class="remove-history-btn" title="Xóa">&times;</span>
+                `;
+                item.querySelector('span:first-child').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    searchInput.value = kw;
+                    searchForm.submit();
+                });
+                item.querySelector('.remove-history-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    removeHistoryItem(kw);
+                });
+                historyList.appendChild(item);
+            });
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatVND(amount) {
+        return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+    }
+
+    function showDropdown() {
+        searchDropdown.classList.remove('d-none');
+        const val = searchInput.value.trim();
+        if (val.length < 2) {
+            historySection.classList.remove('d-none');
+            suggestionsSection.classList.remove('d-none');
+            liveResultsSection.classList.add('d-none');
+            renderHistory();
+        } else {
+            fetchSuggestions(val);
+        }
+    }
+
+    function hideDropdown() {
+        searchDropdown.classList.add('d-none');
+    }
+
+    let debounceTimer = null;
+    function fetchSuggestions(query) {
+        historySection.classList.add('d-none');
+        suggestionsSection.classList.add('d-none');
+        liveResultsSection.classList.remove('d-none');
+        if (keywordPreview) keywordPreview.textContent = query;
+
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetch('/api/books/suggest?keyword=' + encodeURIComponent(query))
+                .then(res => res.json())
+                .then(data => {
+                    liveResultsList.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        liveResultsList.innerHTML = '<div class="text-muted small py-2 px-3 text-center">Không tìm thấy sách nào phù hợp</div>';
+                        return;
+                    }
+                    data.forEach(book => {
+                        const a = document.createElement('a');
+                        a.href = '/shop/book/' + book.maSach;
+                        a.className = 'search-suggest-book-item';
+                        a.innerHTML = `
+                            <img src="${book.hinhAnh || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=500'}" alt="${escapeHtml(book.tenSach)}">
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="fw-bold text-dark text-truncate small">${escapeHtml(book.tenSach)}</div>
+                                <div class="text-muted small" style="font-size: 11px;">${escapeHtml(book.tacGia || 'Nhã Nam')}</div>
+                                <div class="text-primary fw-bold small">${formatVND(book.giaBan)}</div>
+                            </div>
+                        `;
+                        liveResultsList.appendChild(a);
+                    });
+                })
+                .catch(() => {
+                    liveResultsList.innerHTML = '<div class="text-muted small py-2 px-3 text-center">Không thể tải gợi ý</div>';
+                });
+        }, 200);
+    }
+
+    searchInput.addEventListener('focus', showDropdown);
+    searchInput.addEventListener('click', showDropdown);
+
+    searchInput.addEventListener('input', function() {
+        const val = this.value.trim();
+        if (val.length < 2) {
+            historySection.classList.remove('d-none');
+            suggestionsSection.classList.remove('d-none');
+            liveResultsSection.classList.add('d-none');
+            renderHistory();
+        } else {
+            fetchSuggestions(val);
+        }
+    });
+
+    searchForm.addEventListener('submit', function() {
+        saveHistory(searchInput.value);
+    });
+
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+            } catch (e) {}
+            renderHistory();
+        });
+    }
+
+    document.querySelectorAll('#popularKeywordsList .search-tag-badge').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const kw = this.getAttribute('data-keyword');
+            searchInput.value = kw;
+            saveHistory(kw);
+            searchForm.submit();
+        });
+    });
+
+    if (viewAllBtn) {
+        viewAllBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            searchForm.submit();
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!searchContainer.contains(e.target)) {
+            hideDropdown();
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideDropdown();
+        }
+    });
+
+    // Auto-dismiss floating toasts after specified duration (mặc định 3.5s)
+    const serverToasts = document.querySelectorAll('#appToastContainer .app-toast');
+    serverToasts.forEach(toast => {
+        const duration = parseInt(toast.getAttribute('data-auto-dismiss') || '3500', 10);
+        setTimeout(() => {
+            dismissToast(toast);
+        }, duration);
+    });
+});
+
+// Hàm toàn cục đóng toast với hiệu ứng trượt mượt mà
+window.dismissToast = function(toastEl) {
+    if (!toastEl) return;
+    toastEl.classList.add('toast-hiding');
+    setTimeout(() => {
+        toastEl.remove();
+    }, 350);
+};
+
+// Hàm toàn cục hiển thị toast nhanh bằng Javascript: showToast('Nội dung', 'success' | 'error' | 'info', 3500)
+window.showToast = function(message, type = 'success', duration = 3500) {
+    let container = document.getElementById('appToastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'app-toast-container';
+        container.id = 'appToastContainer';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `app-toast toast-${type}`;
+    toast.setAttribute('role', 'alert');
+
+    let iconClass = 'fa-check';
+    if (type === 'error') iconClass = 'fa-triangle-exclamation';
+    else if (type === 'info') iconClass = 'fa-circle-info';
+
+    toast.innerHTML = `
+        <div class="app-toast-content">
+            <div class="app-toast-icon">
+                <i class="fa-solid ${iconClass}"></i>
+            </div>
+            <div class="app-toast-message">${message}</div>
+            <button type="button" class="app-toast-close" onclick="dismissToast(this.closest('.app-toast'))" aria-label="Đóng">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="app-toast-progress" style="animation-duration: ${duration}ms;"></div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        dismissToast(toast);
+    }, duration);
+};
+</script>
+</body>
+</html>

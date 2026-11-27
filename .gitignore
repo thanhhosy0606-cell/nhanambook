@@ -1,0 +1,49 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### VS Code ###
+.vscode/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbattrs.xml
+/.externalToolBuilders/
+/m2-install/
+
+### Log files ###
+*.log
+
+### Node & Temporary files ###
+node_modules/
+package-lock.json
+package.json
+braces.txt
+*.ps1
+
+### Local Secrets & Agent / Submission Artifacts ###
+src/main/resources/application-local.properties
+.env
+.agents/
+AGENTS.md
+CP4_NopBai/
+lombok.config
